@@ -1,0 +1,131 @@
+#########################
+# Load in Trained Model #
+#########################
+import tensorflow as tf
+import os
+import matplotlib.pyplot as plt
+from tensorflow.keras.models import load_model
+import pickle
+from sklearn.model_selection import train_test_split
+import math
+import numpy as np
+
+interactive=False
+PDIR='/cluster/projects/pughlab/projects/cancer_cell_lines/TCGA'
+DATADIR = os.path.join(PDIR, "data")
+OUTDIR = os.path.join(PDIR, "models")
+IMG_SIZE=300
+
+BASE_MODEL='VGG16' # 'VGG16', 'CN'
+
+if BASE_MODEL == 'CN':
+    MODEL='model1'
+    base_model = load_model(os.path.join(OUTDIR, MODEL, 'my_tcga_model.h5'))
+elif BASE_MODEL == 'VGG16':
+    IMG_SHAPE = (IMG_SIZE, IMG_SIZE, 3)
+    os.chdir(OUTDIR)
+    base_model = tf.keras.applications.VGG16(input_shape=IMG_SHAPE,
+                                               include_top=False,
+                                               weights='imagenet')
+
+pickle_X = open(os.path.join(DATADIR, "X.pickle"), "rb")
+pickle_y = open(os.path.join(DATADIR, "y.pickle"), "rb")
+X = pickle.load(pickle_X)
+y = pickle.load(pickle_y)
+
+x_train,x_test,y_train,y_test=train_test_split(X,y,test_size=0.2)
+n=y.max()+1
+del(X,y)
+
+# One-hot encoding of y
+y_train_one_hot = tf.keras.utils.to_categorical(y_train, n)
+y_test_one_hot = tf.keras.utils.to_categorical(y_test, n)
+del(y_train, y_test)
+
+# Format
+x_train = x_train.astype('float32')
+x_test = x_test.astype('float32')
+x_train = x_train / 255
+x_test = x_test / 255
+
+########################
+# Model new top layers #
+########################
+from tensorflow.keras.layers import Dense, GlobalAveragePooling2D
+base_model.trainable = False
+
+global_average_layer = GlobalAveragePooling2D()
+prediction_layer = Dense(units=n, activation='softmax')
+
+model = tf.keras.Sequential([
+  base_model,
+  global_average_layer,
+  prediction_layer
+])
+
+model.compile(loss='categorical_crossentropy',
+              optimizer='adam',
+              metrics=['accuracy'])
+
+if interactive:
+    print("Warning: This quickly exhausts memory")
+    feature_batch = base_model(x_train)
+    feature_batch_average = global_average_layer(feature_batch)
+    prediction_batch = prediction_layer(feature_batch_average)
+    
+if interactive:
+    initial_epochs = 10
+    validation_steps=20
+    evl=(x_train.shape[0] * 0.1) / validation_steps
+    idx=math.floor(evl) * validation_steps
+    loss0,accuracy0 = model.evaluate(x_train[0:idx,],
+                                    y_train_one_hot[0:idx,],
+                                    steps = validation_steps)
+
+hist = model.fit(x_train, y_train_one_hot,
+                 batch_size=32, epochs=2,
+                 validation_split=0.2)
+
+acc = hist.history['accuracy']
+val_acc = hist.history['val_accuracy']
+
+loss = hist.history['loss']
+val_loss = hist.history['val_loss']
+
+fig, (ax1, ax2) = plt.subplots(2, sharex=True)
+ax1.plot(acc, label='Training Accuracy')
+ax1.plot(val_acc, label='Validation Accuracy')
+ax1.legend(loc='lower right')
+ax1.ylabel('Accuracy')
+ax1.ylim([min(plt.ylim()),1])
+
+ax2.plot(loss, label='Training Loss')
+ax2.plot(val_loss, label='Validation Loss')
+ax2.legend(loc='upper right')
+ax2.ylabel('Cross Entropy')
+ax2.ylim([0,1.0])
+ax2.xlabel('epoch')
+
+for ax in axs.flat:
+    ax.set(xlabel='x-label', ylabel='y-label')
+
+plt.figure(figsize=(8, 8))
+plt.subplot(2, 1, 1)
+plt.plot(acc, label='Training Accuracy')
+plt.plot(val_acc, label='Validation Accuracy')
+plt.legend(loc='lower right')
+plt.ylabel('Accuracy')
+plt.ylim([min(plt.ylim()),1])
+plt.title('Training and Validation Accuracy')
+
+plt.subplot(2, 1, 2)
+plt.plot(loss, label='Training Loss')
+plt.plot(val_loss, label='Validation Loss')
+plt.legend(loc='upper right')
+plt.ylabel('Cross Entropy')
+plt.ylim([0,1.0])
+plt.title('Training and Validation Loss')
+plt.xlabel('epoch')
+plt.savefig(os.path.join(OUTDIR, 'vgg16_transfer.png'))
+
+model.save(os.path.join(OUTDIR, 'vgg16_transfer.h5'))
