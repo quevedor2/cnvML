@@ -119,7 +119,7 @@ datadir=Path('/cluster/projects/pughlab/projects/cancer_cell_lines/TCGA_genes')
 os.chdir(datadir)
 df = pd.read_csv(datadir / 'data' / 'Modal_Total_CN_matrix.csv')
 df = df.drop([df.columns[0]], axis=1)
-
+model_type='lr' # 'ann' or 'lr'
 
 ## Feature scaling and organizing X and y
 X = df.values[:, :-1]
@@ -131,15 +131,28 @@ y = pd.get_dummies(df['cancer_type']).values
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
 ## setup and fit a multi-class logistic regression model
-M = MulticlassModels(X, y)
-M.sr_model()
-hist = M.model.fit(X_train, y_train, epochs=200, verbose=0, validation_split=0.2)
-plot_loss_accuracy(hist, os.path.join(datadir, 'models', 'logistic-regression_performance.png'))
+if model_type == 'lr':
+    M = MulticlassModels(X, y)
+    M.sr_model()
+    hist = M.model.fit(X_train, y_train, epochs=100,
+        verbose=0, validation_split=0.2)
+    plot_loss_accuracy(hist, os.path.join(datadir, 'models', 
+        'logistic-regression_performance.png'))
+    M.model.save(os.path.join(datadir, 'models', 'gene_logistic.h5'))
+elif model_type == 'ann':
+    M = MulticlassModels(X, y)
+    M.ann_model()
+    hist = M.model.fit(X_train, y_train, epochs=30,
+        verbose=0, validation_split=0.2)
+    plot_loss_accuracy(hist, os.path.join(datadir,
+        'models', 'ann_performance.png'))
+    M.model.save(os.path.join(datadir, 'models', 'gene_ann.h5'))
 
-M = MulticlassModels(X, y)
-M.ann_model()
-hist = M.model.fit(X_train, y_train, epochs=30, verbose=0, validation_split=0.2)
-plot_loss_accuracy(hist, os.path.join(datadir, 'models', 'ann_performance.png'))
+y_pred_class = M.model.predict_classes(X_test, verbose=0)
+y_test_class = np.argmax(y_test, axis=1)
+print(classification_report(y_test_class, y_pred_class))
+plot_confusion_matrix(M.model, X_test, y_test_class)
+
 
 
 ## Performance
@@ -149,11 +162,3 @@ val_acc = hist.history['val_accuracy']
 loss = hist.history['loss']
 val_loss = hist.history['val_loss']
 print(val_acc)
-
-
-
-## Performance metrics
-y_pred_class = M.model.predict_classes(X_test, verbose=0)
-y_test_class = np.argmax(y_test, axis=1)
-print(classification_report(y_test_class, y_pred_class))
-plot_confusion_matrix(M.model, X_test, y_test_class)
