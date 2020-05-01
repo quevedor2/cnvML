@@ -1,47 +1,11 @@
-
+#############################
+# MultiClass Classification #
+#############################
+# PURPOSE:
 
 #################
-#### MODULES ####
-
-##get_ipython().magic('matplotlib inline')
-##get_ipython().magic("config InlineBackend.figure_format = 'retina'")
-import matplotlib.pyplot as plt
-import pandas as pd
-import numpy as np
-import seaborn as sns
-import warnings
-from pathlib import Path
-
-warnings.filterwarnings('ignore')
-pd.options.display.float_format = '{:,.2f}'.format
-pd.set_option('display.max_rows', 100)
-pd.set_option('display.max_columns', 200)
-pd.set_option('display.width', 250)
-
-from __future__ import print_function
-from datetime import datetime
-from matplotlib.colors import ListedColormap
-from sklearn.datasets import make_classification, make_moons, make_circles
-from sklearn.metrics import confusion_matrix, classification_report, mean_squared_error, mean_absolute_error, r2_score
-from sklearn.linear_model import LogisticRegression
-from sklearn.utils import shuffle
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Dropout, BatchNormalization, Activation
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.python.keras.utils.np_utils import to_categorical
-from sklearn.preprocessing import StandardScaler, LabelEncoder, OneHotEncoder, MinMaxScaler
-from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold, KFold
-import tensorflow.keras.backend as K
-from tensorflow.keras.wrappers.scikit_learn import KerasClassifier
-
-import os
-os.chdir("/cluster/home/quever/git/Applied-Deep-Learning-with-Keras/py")
-from models import *
-from P2_utility_functions import *
-
-#######################
-#### Visualization ####
+# Visualization #
+#################
 def plot_loss_accuracy(hist, outfile):
     acc = hist.history['accuracy']
     val_acc = hist.history['val_accuracy']
@@ -69,8 +33,9 @@ def plot_confusion_matrix(model, X, y):
     sns.heatmap(pd.DataFrame(confusion_matrix(y, y_pred)), annot=True, fmt='d', cmap='YlGnBu', alpha=0.8, vmin=0)
 
 
-###################################
-#### MultiClass Classification ####
+#############################
+# MultiClass Classification #
+#############################
 class MulticlassModels:
     def __init__(self, X, y, model=0):
         self.X = X
@@ -96,15 +61,15 @@ class MulticlassModels:
         self.model=deep_model
 
 
-################################################
-#### Case Study - MultiClass Classification ####
-# We will be using the well known Iris dataset.
-
+###########
+# Modules #
+###########
 import pandas as pd
 import os
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
 
 from sklearn.preprocessing import StandardScaler, LabelEncoder, OneHotEncoder, MinMaxScaler
 from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold, KFold
@@ -113,13 +78,14 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, BatchNormalization, Activation
 from tensorflow.keras.optimizers import Adam
 
-############################################
-#### Data Visualization & Preprocessing ####
+######################################
+# Data Visualization & Preprocessing #
+######################################
 datadir=Path('/cluster/projects/pughlab/projects/cancer_cell_lines/TCGA_genes')
 os.chdir(datadir)
 df = pd.read_csv(datadir / 'data' / 'Modal_Total_CN_matrix.csv')
 df = df.drop([df.columns[0]], axis=1)
-model_type='lr' # 'ann' or 'lr'
+model_type=sys.argv[1] # 'ann' or 'lr'
 
 ## Feature scaling and organizing X and y
 X = df.values[:, :-1]
@@ -131,27 +97,23 @@ y = pd.get_dummies(df['cancer_type']).values
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
 ## setup and fit a multi-class logistic regression model
+M = MulticlassModels(X, y)
 if model_type == 'lr':
-    M = MulticlassModels(X, y)
     M.sr_model()
-    hist = M.model.fit(X_train, y_train, epochs=100,
-        verbose=0, validation_split=0.2)
-    plot_loss_accuracy(hist, os.path.join(datadir, 'models', 
-        'logistic-regression_performance.png'))
-    M.model.save(os.path.join(datadir, 'models', 'gene_logistic.h5'))
 elif model_type == 'ann':
-    M = MulticlassModels(X, y)
     M.ann_model()
-    hist = M.model.fit(X_train, y_train, epochs=30,
-        verbose=0, validation_split=0.2)
-    plot_loss_accuracy(hist, os.path.join(datadir,
-        'models', 'ann_performance.png'))
-    M.model.save(os.path.join(datadir, 'models', 'gene_ann.h5'))
 
-y_pred_class = M.model.predict_classes(X_test, verbose=0)
-y_test_class = np.argmax(y_test, axis=1)
-print(classification_report(y_test_class, y_pred_class))
-plot_confusion_matrix(M.model, X_test, y_test_class)
+
+hist = M.model.fit(X_train, y_train, epochs=100,
+    verbose=1, validation_split=0.2)
+plot_loss_accuracy(hist, os.path.join(datadir, 'models', model_type, "performance.png"))
+M.model.save(os.path.join(datadir, 'models', model_type, 'model.h5'))
+
+
+#y_pred_class = M.model.predict_classes(X_test, verbose=0)
+#y_test_class = np.argmax(y_test, axis=1)
+#print(classification_report(y_test_class, y_pred_class))
+#plot_confusion_matrix(M.model, X_test, y_test_class)
 
 
 

@@ -1,6 +1,7 @@
 ##############
 # CNN Models #
 ##############
+
 class CNN:
     def __init__(self, y, width, height, channel, model=0):
         self.y=y
@@ -61,6 +62,7 @@ class CNN:
 #################
 # Visualization #
 #################
+
 def plot_loss_accuracy(hist, outfile):
     acc = hist.history['accuracy']
     val_acc = hist.history['val_accuracy']
@@ -90,6 +92,7 @@ def plot_confusion_matrix(model, X, y):
 #############
 # Load Data #
 #############
+
 import pandas as pd
 import os
 from pathlib import Path
@@ -105,21 +108,18 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D
 
 # Load data from TCGA Hilberts
+
 PDIR='/cluster/projects/pughlab/projects/cancer_cell_lines/TCGA'
 DATADIR = os.path.join(PDIR, "data")
 OUTDIR = os.path.join(PDIR, "models")
 IMG_SIZE=300
-model_type=sys.argv[0]
+model_type=sys.argv[1]
 
 pickle_X = open(os.path.join(DATADIR, "X.pickle"), "rb")
 pickle_y = open(os.path.join(DATADIR, "y.pickle"), "rb")
 X = pickle.load(pickle_X)
 y = pickle.load(pickle_y)
 #X = np.array(X).reshape(-1, IMG_SIZE, IMG_SIZE, 3)
-
-img = plt.imshow(X[0])
-plt.savefig(os.path.join(OUTDIR, "test.png"))
-
 
 x_train,x_test,y_train,y_test=train_test_split(X,y,test_size=0.2)
 
@@ -136,9 +136,9 @@ x_test = x_test.astype('float32')
 x_train = x_train / 255
 x_test = x_test / 255
 
-#################
+########################
 # Build/Train ConvNet #
-#################
+########################
 
 
 M=CNN(y, width=IMG_SIZE, height=IMG_SIZE, channel=3)
@@ -146,13 +146,15 @@ if model_type=='model1':
     M.model_one()
 elif model_type=='model2':
     M.model_two()
-    
-hist = M.model.fit(x_train, y_train_one_hot,
-                 batch_size=32, epochs=40,
-                 validation_split=0.2)
-plot_loss_accuracy(hist. os.path.join(OUTDIR, model_type, "cnn_performance.png"))
+else:
+    print("no model selected")
+
+
+hist = M.model.fit(x_train, y_train_one_hot, batch_size=32, epochs=20, validation_split=0.2)
 M.model.evaluate(x_test, y_test_one_hot)[1]
 M.model.save(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2.h5'))
+plot_loss_accuracy(hist, os.path.join(OUTDIR, model_type, "cnn_performance.png"))
+
 
 #y_pred_class = M.model.predict_classes(X_test, verbose=0)
 #y_test_class = np.argmax(y_test, axis=1)
