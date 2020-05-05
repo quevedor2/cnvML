@@ -84,10 +84,59 @@ def plot_loss_accuracy(hist, outfile):
     fig.show()
     fig.savefig(outfile)
 
-def plot_confusion_matrix(model, X, y):
+def plot_confusion_matrix(model, X, y, outfile):
     y_pred = model.predict_classes(X, verbose=0)
     plt.figure(figsize=(8, 6))
-    sns.heatmap(pd.DataFrame(confusion_matrix(y, y_pred)), annot=True, fmt='d', cmap='YlGnBu', alpha=0.8, vmin=0)
+    cm=confusion_matrix(y, y_pred)
+    sns.heatmap(pd.DataFrame(cm), annot=True, fmt='d', cmap='YlGnBu', alpha=0.8, vmin=0)
+    plt.savefig(outfile)
+    return cm
+
+def plot_class_cm(cm, outfile):
+    class_frac=cm.diagonal() / cm.sum(0)
+    class_frac=class_frac.round(2)
+    class_id=list(range(1, len(class_frac)+1))
+    class_df = pd.DataFrame({'ID':class_id, 'Frac':class_frac, 'Cnt':cm.diagonal(), 'Total':cm.sum(0)})
+    
+    #b1=plt.bar("ID", "Total", data=class_df,class_id, class_frac)
+    b2=plt.bar("ID", "Frac", data=class_df)
+    plt.xlabel("Cancer_Types")
+    plt.ylabel("Match")
+    plt.xticks(class_id)
+    plt.savefig(outfile)
+
+######################
+# Feature Extraction #
+######################
+def create_occlusion_dataset(occ, IMG_SIZE=300, step=10):
+    occ_idx=list(range(0, IMG_SIZE, step))
+    # Initialize zeroes np.array
+    occ_arr=np.zeros((len(occ_idx)*len(occ_idx),
+                      IMG_SIZE, IMG_SIZE, 3))
+    arr_ind=0
+    for ypos in occ_idx:
+        for xpos in occ_idx:
+            occ_tmp=occ.copy()
+            # Blank out box area
+            occ_tmp[xpos:(xpos+step-1), ypos:(ypos+step-1),] = 1
+            occ_arr[arr_ind,:,:,:] = occ_tmp
+            arr_ind=arr_ind+1
+    
+    return occ_arr
+
+def fill_occ_array(p, IMG_SIZE=300, step=50):
+    occ_idx=list(range(0, IMG_SIZE, step))
+    
+    # Initialize zeroes np.array
+    occ_viz=np.zeros((IMG_SIZE, IMG_SIZE,3))
+    arr_ind=0
+    for ypos in occ_idx:
+        for xpos in occ_idx:
+            yidx=ypos if ypos == 0 else ypos - 1
+            xidx=xpos if xpos == 0 else xpos - 1
+            occ_viz[xidx:(xpos+step-1), yidx:(ypos+step-1),] = p[arr_ind]
+            arr_ind=arr_ind+1
+    return occ_viz
     
 #############
 # Load Data #
@@ -100,14 +149,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 import sys
+import seaborn as sns
 
+from sklearn.metrics import confusion_matrix, classification_report, r2_score
 from sklearn.model_selection import train_test_split
 
 import tensorflow.keras
-from tensorflow.keras.models import Sequential
+from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D
 
-# Load data from TCGA Hilberts
+# VARIABLES
 
 PDIR='/cluster/projects/pughlab/projects/cancer_cell_lines/TCGA'
 DATADIR = os.path.join(PDIR, "data")
@@ -115,16 +166,23 @@ OUTDIR = os.path.join(PDIR, "models")
 IMG_SIZE=300
 model_type=sys.argv[1]
 
+# Load data from TCGA Hilberts
+
 pickle_X = open(os.path.join(DATADIR, "X.pickle"), "rb")
 pickle_y = open(os.path.join(DATADIR, "y.pickle"), "rb")
 X = pickle.load(pickle_X)
 y = pickle.load(pickle_y)
 #X = np.array(X).reshape(-1, IMG_SIZE, IMG_SIZE, 3)
 
-x_train,x_test,y_train,y_test=train_test_split(X,y,test_size=0.2)
+x_train,x_test,y_train,y_test=train_test_split(X,y,test_size=0.2, random_state=1234)
 
-# Load CIFAR-10 and format data
-#(x_train2, y_train2), (x_test2, y_test2) = cifar10.load_data()
+## Occlusion visualization check
+#i=0
+#occ_array = create_occlusion_dataset(x_train[i].copy(), 300, 10)
+#plt.imshow(occ_array[200,].reshape(IMG_SIZE, IMG_SIZE,3))
+#plt.savefig(os.path.join(OUTDIR, model_type, "occlusion_test.png"))
+#plt.close("all")
+
 
 # One-hot encoding of y
 y_train_one_hot = tensorflow.keras.utils.to_categorical(y_train, y.max()+1)
@@ -156,6 +214,44 @@ M.model.save(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2.h5'))
 plot_loss_accuracy(hist, os.path.join(OUTDIR, model_type, "cnn_performance.png"))
 
 
-#y_pred_class = M.model.predict_classes(X_test, verbose=0)
-#y_test_class = np.argmax(y_test, axis=1)
-#plot_confusion_matrix(M.model, x_test, y_test_one_hot)
+####################
+# Spot-check model #
+####################
+M = load_model(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2.h5'))
+y_test_class = np.argmax(y_test_one_hot, axis=1)
+cm = plot_confusion_matrix(M, x_test, y_test_class,
+                           os.path.join(OUTDIR, model_type, "cnn_confusion-matrix.png"))
+plt.close("all")
+
+cl=3
+cl_samples = [i for i, x in enumerate(y_train==cl) if x]
+gt_prob=M.predict_proba(x_train[cl_samples,:], verbose=False)[0,y_train[i]].round(3)
+x2= x_train.mean(axis=0)
+plt.imshow(x2.reshape(IMG_SIZE, IMG_SIZE,3))
+plt.savefig(os.path.join(OUTDIR, model_type, "occlusion_test.png"))
+plt.close("all")
+
+ctype_avg=np.zeros((len(cl_samples), IMG_SIZE, IMG_SIZE, 3))
+arr_ind=0
+for i in cl_samples[0:50]:
+    print(arr_ind)
+    occ_array = create_occlusion_dataset(x_train[i].copy(), 300, 10)
+    occ_prob=M.predict_proba(occ_array, verbose=False)[:,y_train[i]].round(3)
+    occ_viz=fill_occ_array(occ_prob, IMG_SIZE,10)
+    ctype_avg[arr_ind,:,:,:] = (occ_viz - np.median(occ_viz))
+    arr_ind=arr_ind+1
+
+x3 = ctype_avg[0:50].mean(axis=0)
+
+plt.imshow(x3.reshape(IMG_SIZE, IMG_SIZE,3)[:,:,0], cmap='inferno',
+           vmin=np.quantile(x3, 0.05), vmax=np.quantile(x3, 0.95))
+plt.savefig(os.path.join(OUTDIR, model_type, "occlusion_p.png"))
+plt.close("all")
+
+plt.contour(x3.reshape(IMG_SIZE, IMG_SIZE,3)[:,:,0],
+            levels=np.logspace(np.quantile(x3, 0.05), np.quantile(x3, 0.25), np.quantile(x3, 0.5)),
+            colors='black', alpha=1)
+plt.savefig(os.path.join(OUTDIR, model_type, "occlusion_p2.png"))
+plt.close("all")
+
+plot_class_cm(cm, os.path.join(OUTDIR, model_type, "cnn_cm_barplot.png"))
