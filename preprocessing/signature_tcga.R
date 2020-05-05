@@ -6,16 +6,35 @@ this_path <- "~/git/cnsignatures"
 source(paste(this_path,"helper_functions.R",sep="/"))
 source(paste(this_path,"main_functions.R",sep="/"))
 
-setwd(file.path(this_path, "manuscript_Rmarkdown"))
+# setwd(file.path(this_path, "manuscript_Rmarkdown"))
+# eset.dir <- '/mnt/work1/users/bhklab/Projects/cell_line_clonality/total_cel_list/datasets/seg_files/esets'
+# handle <- 'gCSI'
+# eset <- file.path(eset.dir, paste0(handle, "_bin_eset.Rdata"))
+# load(eset) # cl.eset
 
 
-eset.dir <- '/mnt/work1/users/bhklab/Projects/cell_line_clonality/total_cel_list/datasets/seg_files/esets'
-handle <- 'gCSI'
-eset <- file.path(eset.dir, paste0(handle, "_bin_eset.Rdata"))
-load(eset) # cl.eset
+PDIR <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/TCGA_signatures'
+segf <- file.path(PDIR, "input", "TCGA_mastercalls.abs_segtabs.fixed.txt")
+segd <- read.table(segf, sep="\t", header=TRUE, stringsAsFactors = FALSE)
+colnames(segd)[2:4] <- c('chrom', 'loc.start', 'loc.end')
 
-CN_features <- extractCopynumberFeatures(cl.eset, cores = 8)
+chr.size.dat <- getChrLength()
+seqlevelsStyle(chr.size.dat) <- 'NCBI'
+scale <- 1e5
 
+
+
+
+order=7
+
+
+
+#read.table(file.path(tcga_dir, "input", "TCGA_mastercalls.abs_segtabs.fixed.txt"))
+
+tcga_dir <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/TCGA_signatures'
+segl <- split(segd[,c(2:6,9)], segd$Sample)
+segl <- segl[-which(sapply(segl, nrow)==1)]
+CN_features <- extractCopynumberFeatures(segl, pset.assay='Modal_Total_CN', cores = 8)
 
 ############################################
 #### Decompose into Mixture of Gaussian ####
@@ -28,26 +47,32 @@ niter=1000
 dat<-as.numeric(CN_features[["segsize"]][,2])
 segsize_mm<-fitComponent(dat,seed=seed,model_selection=model_selection,
                          min_prior=min_prior,niter=niter,nrep=nrep,min_comp=10,max_comp=10)
+save(segsize_mm, file=file.path(PDIR, "output", "newfit", "mm_segsize.rda"))
 
 dat<-as.numeric(CN_features[["bp10MB"]][,2])
 bp10MB_mm<-fitComponent(dat,dist="pois",seed=seed,model_selection=model_selection,
                         min_prior=min_prior,niter=niter,nrep=nrep,min_comp=3,max_comp=3)
+save(bp10MB_mm, file=file.path(PDIR, "output", "newfit", "mm_bp10MB.rda"))
 
 dat<-as.numeric(CN_features[["osCN"]][,2])
 osCN_mm<-fitComponent(dat,dist="pois",seed=seed,model_selection=model_selection,
                       min_prior=min_prior,niter=niter,nrep=nrep,min_comp=3,max_comp=3)
+save(osCN_mm, file=file.path(PDIR, "output", "newfit", "mm_osCN.rda"))
 
 dat<-as.numeric(CN_features[["bpchrarm"]][,2])
 bpchrarm_mm<-fitComponent(dat,dist="pois",seed=seed,model_selection=model_selection,
                           min_prior=min_prior,niter=niter,nrep=3,min_comp=5,max_comp=5)
+save(bpchrarm_mm, file=file.path(PDIR, "output", "newfit", "mm_bpchrarm.rda"))
 
 dat<-as.numeric(CN_features[["changepoint"]][,2])
 changepoint_mm<-fitComponent(dat,seed=seed,model_selection=model_selection,
                              min_prior=min_prior,niter=niter,nrep=nrep,min_comp=7,max_comp=7)
+save(changepoint_mm, file=file.path(PDIR, "output", "newfit", "mm_changepoint.rda"))
 
 dat<-as.numeric(CN_features[["copynumber"]][,2])
 copynumber_mm<-fitComponent(dat,seed=seed,model_selection=model_selection,
                             nrep=nrep,min_comp=8,max_comp=8,min_prior=0.005,niter=2000)
+save(copynumber_mm, file=file.path(PDIR, "output", "newfit", "mm_copynumber.rda"))
 
 CN_components<-list(segsize=segsize_mm,
                     bp10MB=bp10MB_mm,
@@ -55,12 +80,13 @@ CN_components<-list(segsize=segsize_mm,
                     changepoint=changepoint_mm,
                     copynumber=copynumber_mm,
                     bpchrarm=bpchrarm_mm)
+save(CN_components, file=file.path(PDIR, "output", "newfit", "components.rda"))
 
 
 
-
-comp.mat<-generateSampleByComponentMatrix(CN_features, CN_components,
-                                          cores=1, subcores=num_cores)
+comp.mat <- generateSampleByComponentMatrix(CN_features, CN_components,
+                                            cores=1, subcores=num_cores)
+save(comp.mat, file=file.path(PDIR, "output", "newfit", "sample_comp_mat.rda"))
 
 NMF::aheatmap(comp.mat,
               fontsize = 7, Rowv=FALSE, Colv=FALSE,

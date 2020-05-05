@@ -43,7 +43,7 @@ scale <- 1e5
 order=7
 
 segl <- split(segd, segd$Sample)
-hilberts <- lapply(segl[-c(1:180)], function(seg){
+hilberts <- lapply(segl, function(seg){
   sample_id <- unique(seg$Sample) 
   print(paste0("Sample: ", sample_id, " (", grep(sample_id, names(segl)), 
                "/", length(segl), ")"))
