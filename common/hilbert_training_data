@@ -19,10 +19,11 @@ CATEGORIES = ["ACC", "BLCA", "BRCA", "CESC", "CHOL", "COAD",
 			  "KIRP", "LAML", "LGG", "LIHC", "LUAD", "LUSC",
 			  "MESO", "OV", "PAAD", "PCPG", "PRAD", "READ",
 			  "SARC", "SKCM", "STAD", "TGCT", "THCA", "THYM",
-			  "UCEC", "UCS", "UVM"]
+			  "UCEC", "UCS", "UVM", "Normal"]
 
 # The size of the images that your neural network will use
 IMG_SIZE = 300
+seed=1234
 
 ## Checking or all images in the data folder
 #for category in CATEGORIES :
@@ -45,7 +46,7 @@ def create_training_data():
 				pass
 
 create_training_data()
-random.shuffle(training_data)
+random.Random(seed).shuffle(training_data,)
 
 X = [] #features
 y = [] #labels
@@ -58,7 +59,7 @@ X = np.array(X).reshape(-1, IMG_SIZE, IMG_SIZE, 3)
 y = np.array(y).reshape(-1, 1)
 
 img = plt.imshow(X[1])
-plt.savefig("test.png")
+plt.savefig(os.path.join(DATADIR, "test.png"))
 
 # Creating the files containing all the information about your model
 pickle_out = open(os.path.join(DATADIR, "X.pickle"), "wb")
@@ -69,5 +70,5 @@ pickle_out = open(os.path.join(DATADIR, "y.pickle"), "wb")
 pickle.dump(y, pickle_out)
 pickle_out.close()
 
-pickle_in = open("X.pickle", "rb")
-X = pickle.load(pickle_in)
+#pickle_in = open("X.pickle", "rb")
+#X = pickle.load(pickle_in)
