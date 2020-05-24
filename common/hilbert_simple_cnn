@@ -55,7 +55,7 @@ class CNN:
         model.add(Dense(units=self.y.max()+1, activation='softmax'))
         
         model.compile(optimizer='adam',
-                      loss='binary_crossentropy',
+                      loss='categorical_crossentropy',
                       metrics=['accuracy'])
         self.model=model
 
@@ -137,7 +137,7 @@ def fill_occ_array(p, IMG_SIZE=300, step=50):
             occ_viz[xidx:(xpos+step-1), yidx:(ypos+step-1),] = p[arr_ind]
             arr_ind=arr_ind+1
     return occ_viz
-    
+
 #############
 # Load Data #
 #############
@@ -172,6 +172,10 @@ pickle_X = open(os.path.join(DATADIR, "X.pickle"), "rb")
 pickle_y = open(os.path.join(DATADIR, "y.pickle"), "rb")
 X = pickle.load(pickle_X)
 y = pickle.load(pickle_y)
+#plt.imshow(X[2,].reshape(IMG_SIZE, IMG_SIZE,3))
+#plt.savefig(os.path.join(OUTDIR, model_type, "class_25.png"))
+#plt.close("all")
+
 #X = np.array(X).reshape(-1, IMG_SIZE, IMG_SIZE, 3)
 
 x_train,x_test,y_train,y_test=train_test_split(X,y,test_size=0.2, random_state=1234)
@@ -223,6 +227,12 @@ cm = plot_confusion_matrix(M, x_test, y_test_class,
                            os.path.join(OUTDIR, model_type, "cnn_confusion-matrix.png"))
 plt.close("all")
 
+plot_class_cm(cm, os.path.join(OUTDIR, model_type, "cnn_cm_barplot.png"))
+plt.close("all")
+
+#################
+# Occlusion Map #
+#################
 cl=3
 cl_samples = [i for i, x in enumerate(y_train==cl) if x]
 gt_prob=M.predict_proba(x_train[cl_samples,:], verbose=False)[0,y_train[i]].round(3)
@@ -253,5 +263,3 @@ plt.contour(x3.reshape(IMG_SIZE, IMG_SIZE,3)[:,:,0],
             colors='black', alpha=1)
 plt.savefig(os.path.join(OUTDIR, model_type, "occlusion_p2.png"))
 plt.close("all")
-
-plot_class_cm(cm, os.path.join(OUTDIR, model_type, "cnn_cm_barplot.png"))
