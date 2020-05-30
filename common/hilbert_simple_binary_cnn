@@ -1,7 +1,6 @@
 ##############
 # CNN Models #
 ##############
-print("Pre-defined functions")
 class CNN:
     def __init__(self, y, width, height, channel, model=0):
         self.y=y
@@ -100,10 +99,13 @@ def plot_class_cm(cm, outfile):
     
     #b1=plt.bar("ID", "Total", data=class_df,class_id, class_frac)
     b2=plt.bar("ID", "Frac", data=class_df)
+    plt.rcParams["figure.figsize"] = [6,2]
     plt.xlabel("Cancer_Types")
-    plt.ylabel("Match")
-    plt.xticks(class_id)
+    plt.ylabel("Accuracy")
+    plt.subplots_adjust(bottom=0.2, top=0.8)
+    plt.xticks(class_id, rotation=90)
     plt.savefig(outfile)
+
 
 ######################
 # Feature Extraction #
@@ -141,7 +143,6 @@ def fill_occ_array(p, IMG_SIZE=300, step=50):
 #############
 # Load Data #
 #############
-print("Pre-libraries")
 import pandas as pd
 import os
 from pathlib import Path
@@ -152,17 +153,14 @@ import sys
 import seaborn as sns
 import errno
 
-print("pre sk")
 from sklearn.metrics import confusion_matrix, classification_report, r2_score
 from sklearn.model_selection import train_test_split
 
-print("pre tensor")
 import tensorflow.keras
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D
 
 # VARIABLES
-print("It starts here...")
 PDIR='/cluster/projects/pughlab/projects/cancer_cell_lines/TCGA'
 DATADIR = os.path.join(PDIR, "data")
 OUTDIR = os.path.join(PDIR, "models")
