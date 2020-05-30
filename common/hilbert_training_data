@@ -10,16 +10,20 @@ import pickle
 file_list = []
 class_list = []
 
-PDIR='/cluster/projects/pughlab/projects/cancer_cell_lines/TCGA'
-DATADIR = os.path.join(PDIR, "data")
+analysis = 'CCL' #'TCGA' or 'CCL'
+PDIR='/cluster/projects/pughlab/projects/cancer_cell_lines/' + analysis
 
-# All the categories you want your neural network to detect
-CATEGORIES = ["ACC", "BLCA", "BRCA", "CESC", "CHOL", "COAD",
-			  "DLBC", "ESCA", "GBM", "HNSC", "KICH", "KIRC",
-			  "KIRP", "LAML", "LGG", "LIHC", "LUAD", "LUSC",
-			  "MESO", "OV", "PAAD", "PCPG", "PRAD", "READ",
-			  "SARC", "SKCM", "STAD", "TGCT", "THCA", "THYM",
-			  "UCEC", "UCS", "UVM", "Normal"]
+if(analysis is 'CCL'):
+	DATADIRS=[os.path.join(PDIR, "data", x) for x in ['GDSC', 'CCLE', 'GNE']]
+else:
+	DATADIRS=os.path.join(PDIR, "data")
+	# All the categories you want your neural network to detect
+	CATEGORIES = ["ACC", "BLCA", "BRCA", "CESC", "CHOL", "COAD",
+				  "DLBC", "ESCA", "GBM", "HNSC", "KICH", "KIRC",
+				  "KIRP", "LAML", "LGG", "LIHC", "LUAD", "LUSC",
+				  "MESO", "OV", "PAAD", "PCPG", "PRAD", "READ",
+				  "SARC", "SKCM", "STAD", "TGCT", "THCA", "THYM",
+				  "UCEC", "UCS", "UVM", "Normal"]
 
 # The size of the images that your neural network will use
 IMG_SIZE = 300
@@ -31,44 +35,52 @@ seed=1234
 #	for img in os.listdir(path):
 #		img_array = cv2.imread(os.path.join(path, img), cv2.IMREAD_GRAYSCALE)
 
-training_data = []
-
-def create_training_data():
-	for category in CATEGORIES :
-		path = os.path.join(DATADIR, category)
-		class_num = CATEGORIES.index(category)
-		for img in os.listdir(path):
-			try :
-				img_array = cv2.imread(os.path.join(path, img), cv2.IMREAD_COLOR)
-				new_array = cv2.resize(img_array, (IMG_SIZE, IMG_SIZE), interpolation = cv2.INTER_AREA)
-				training_data.append([new_array, class_num])
-			except Exception as e:
-				pass
-
-create_training_data()
-random.Random(seed).shuffle(training_data,)
-
-X = [] #features
-y = [] #labels
-
-for features, label in training_data:
-	X.append(features)
-	y.append(label)
-
-X = np.array(X).reshape(-1, IMG_SIZE, IMG_SIZE, 3)
-y = np.array(y).reshape(-1, 1)
-
-img = plt.imshow(X[1])
-plt.savefig(os.path.join(DATADIR, "test.png"))
-
-# Creating the files containing all the information about your model
-pickle_out = open(os.path.join(DATADIR, "X.pickle"), "wb")
-pickle.dump(X, pickle_out)
-pickle_out.close()
-
-pickle_out = open(os.path.join(DATADIR, "y.pickle"), "wb")
-pickle.dump(y, pickle_out)
-pickle_out.close()
+for DATADIR in DATADIRS:
+	print(DATADIR)
+	training_data = []
+	
+	def create_training_data(CANCER_TYPES):
+		for category in CANCER_TYPES :
+			path = os.path.join(DATADIR, category)
+			class_num = CANCER_TYPES.index(category)
+			for img in os.listdir(path):
+				try :
+					img_array = cv2.imread(os.path.join(path, img), cv2.IMREAD_COLOR)
+					new_array = cv2.resize(img_array, (IMG_SIZE, IMG_SIZE), interpolation = cv2.INTER_AREA)
+					training_data.append([new_array, class_num])
+				except Exception as e:
+					pass
+	
+	if(analysis is 'CCL'):
+		CATEGORIES=[]
+		for o in os.listdir(DATADIR):
+			if os.path.isdir(os.path.join(DATADIR, o)):
+				CATEGORIES.append(o)
+	
+	create_training_data(CATEGORIES)
+	random.Random(seed).shuffle(training_data,)
+	
+	X = [] #features
+	y = [] #labels
+	
+	for features, label in training_data:
+		X.append(features)
+		y.append(label)
+		
+	X = np.array(X).reshape(-1, IMG_SIZE, IMG_SIZE, 3)
+	y = np.array(y).reshape(-1, 1)
+	
+	img = plt.imshow(X[1])
+	plt.savefig(os.path.join(DATADIR, "test.png"))
+	
+	# Creating the files containing all the information about your model
+	pickle_out = open(os.path.join(DATADIR, "X.pickle"), "wb")
+	pickle.dump(X, pickle_out)
+	pickle_out.close()
+	
+	pickle_out = open(os.path.join(DATADIR, "y.pickle"), "wb")
+	pickle.dump(y, pickle_out)
+	pickle_out.close()
 
 #pickle_in = open("X.pickle", "rb")
 #X = pickle.load(pickle_in)
