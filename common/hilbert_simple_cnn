@@ -100,10 +100,13 @@ def plot_class_cm(cm, outfile):
     
     #b1=plt.bar("ID", "Total", data=class_df,class_id, class_frac)
     b2=plt.bar("ID", "Frac", data=class_df)
+    plt.rcParams["figure.figsize"] = [6,2]
     plt.xlabel("Cancer_Types")
-    plt.ylabel("Match")
-    plt.xticks(class_id)
+    plt.ylabel("Accuracy")
+    plt.subplots_adjust(bottom=0.2, top=0.8)
+    plt.xticks(class_id, rotation=90)
     plt.savefig(outfile)
+
 
 ######################
 # Feature Extraction #
@@ -202,26 +205,27 @@ x_test = x_test / 255
 # Build/Train ConvNet #
 ########################
 
-
-M=CNN(y, width=IMG_SIZE, height=IMG_SIZE, channel=3)
-if model_type=='model1':
-    M.model_one()
-elif model_type=='model2':
-    M.model_two()
+if not os.path.exists(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2.h5')):
+    M=CNN(y, width=IMG_SIZE, height=IMG_SIZE, channel=3)
+    if model_type=='model1':
+        M.model_one()
+    elif model_type=='model2':
+        M.model_two()
+    else:
+        print("no model selected")
+        
+    hist = M.model.fit(x_train, y_train_one_hot, batch_size=32, epochs=20, validation_split=0.2)
+    M.model.evaluate(x_test, y_test_one_hot)[1]
+    M.model.save(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2.h5'))
+    plot_loss_accuracy(hist, os.path.join(OUTDIR, model_type, "cnn_performance.png"))
+    M=M.model
 else:
-    print("no model selected")
-
-
-hist = M.model.fit(x_train, y_train_one_hot, batch_size=32, epochs=20, validation_split=0.2)
-M.model.evaluate(x_test, y_test_one_hot)[1]
-M.model.save(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2.h5'))
-plot_loss_accuracy(hist, os.path.join(OUTDIR, model_type, "cnn_performance.png"))
-
+    print("Loading existing model...")
+    M = load_model(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2.h5'))
 
 ####################
 # Spot-check model #
 ####################
-M = load_model(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2.h5'))
 y_test_class = np.argmax(y_test_one_hot, axis=1)
 cm = plot_confusion_matrix(M, x_test, y_test_class,
                            os.path.join(OUTDIR, model_type, "cnn_confusion-matrix.png"))
