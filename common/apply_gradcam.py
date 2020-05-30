@@ -4,11 +4,8 @@
 # python apply_gradcam.py --image images/soccer_ball.jpg --model resnet
 
 # import the necessary packages
-from tensorflow.keras.applications import ResNet50
-from tensorflow.keras.applications import VGG16
-from tensorflow.keras.preprocessing.image import img_to_array
-from tensorflow.keras.preprocessing.image import load_img
-from tensorflow.keras.applications import imagenet_utils
+from tensorflow.keras.applications import ResNet50, VGG16, imagenet_utils
+from tensorflow.keras.preprocessing.image import img_to_array, load_img
 from tensorflow.keras.models import load_model
 
 from sklearn.model_selection import train_test_split
@@ -20,7 +17,7 @@ import os
 import pickle
 
 
-os.chdir("/cluster/home/quever/git/keras-grad-cam")
+os.chdir("/cluster/home/quever/git/cnvML")
 from pyimagesearch.gradcam import GradCAM
 
 # construct the argument parser and parse the arguments
@@ -36,7 +33,9 @@ ap.add_argument("-j", "--class_j", type=int, default=int(0),
 	choices=range(0,32), metavar="[0-32]",
 	help="Cancer type class to pick (int)")
 args = vars(ap.parse_args())
-args = {'image':'/cluster/projects/pughlab/projects/cancer_cell_lines/TCGA/data/OV/TCGA-24-1434-01.png',
+# LIMPS_p_NCLE_DNA2N_GenomeWideSNP_6_G12_246776.png - MDAMB231_BREAST breast carcinoma
+# /cluster/home/quever/xfer/ARLES_p_NCLE_DNAAffy2_S_GenomeWideSNP_6_A10_256020.png - CaOV-3 high grade serous ovarian
+args = {'image':'/cluster/home/quever/xfer/LIMPS_p_NCLE_DNA2N_GenomeWideSNP_6_G12_246776.png',
   'pdir':'/cluster/projects/pughlab/projects/cancer_cell_lines/TCGA',
   'model':'model1', 'class_j':19}
 
