@@ -34,7 +34,7 @@ copy_status <- sapply(fls, function(fl_i){
   }
   if(!dir.exists(target_dir)) dir.create(target_dir, recursive = TRUE)
   file.copy(file.path(PDIR, "output", "hilbert", fl_i),
-            file.path(target_dir, fl_i))
+            file.path(target_dir, fl_i), overwrite = TRUE)
 })
 
 
