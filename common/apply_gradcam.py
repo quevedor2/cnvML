@@ -58,7 +58,7 @@ IMG_SIZE=300
 #Xsub = Xsub / 255
 
 orig = cv2.imread(args["image"])
-resized = cv2.resize(orig, (IMG_SIZE, IMG_SIZE))
+#resized = cv2.resize(orig, (IMG_SIZE, IMG_SIZE))
 
 # load the input image from disk (in Keras/TensorFlow format) and
 # preprocess it
