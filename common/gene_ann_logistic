@@ -27,28 +27,51 @@ def plot_loss_accuracy(hist, outfile):
     fig.show()
     fig.savefig(outfile)
 
-def plot_confusion_matrix(model, X, y, outfile):
-    y_pred = model.predict_classes(X, verbose=0)
+def plot_confusion_matrix(model, X, y, range_y, outfile):
+    y_pred = list(model.predict_classes(X, verbose=0))
+    y = list(y)
     plt.figure(figsize=(8, 6))
+    
+    # Ensure that all the classes are represented
+    y.extend(list(range_y))
+    y_pred.extend(list(range_y))
     cm=confusion_matrix(y, y_pred)
+    np.fill_diagonal(cm, list(cm.diagonal()-1))
+    
+    # Make the heatmaps!!!
     sns.heatmap(pd.DataFrame(cm), annot=True, fmt='d', cmap='YlGnBu', alpha=0.8, vmin=0)
     plt.savefig(outfile)
     return cm
 
-def plot_class_cm(cm, outfile):
-    class_frac=cm.diagonal() / cm.sum(0)
+def plot_class_cm(cm, outfile,metric ='f1'):
+    (p, r, f1) = get_F1score(cm)
+    if (metric is 'f1'):
+        class_frac=f1
+    elif (metric is 'p'):
+        class_frac = p
+    else:
+        class_frac = r
+    
     class_frac=class_frac.round(2)
-    class_id=list(range(1, len(class_frac)+1))
-    class_df = pd.DataFrame({'ID':class_id, 'Frac':class_frac, 'Cnt':cm.diagonal(), 'Total':cm.sum(0)})
+    class_id=list(range(0, len(class_frac)))
+    class_df = pd.DataFrame({'ID':class_id, 'Frac':class_frac,
+                            'Cnt':cm.diagonal(), 'Total':cm.sum(0)})
     
     #b1=plt.bar("ID", "Total", data=class_df,class_id, class_frac)
     b2=plt.bar("ID", "Frac", data=class_df)
-    plt.rcParams["figure.figsize"] = [6,2]
+    plt.ylim((0,1))
+    #plt.rcParams["figure.figsize"] = [6,2]
     plt.xlabel("Cancer_Types")
-    plt.ylabel("Accuracy")
+    plt.ylabel(metric)
     plt.subplots_adjust(bottom=0.2, top=0.8)
     plt.xticks(class_id, rotation=90)
     plt.savefig(outfile)
+
+def get_F1score(cm):
+    precision = cm.diagonal() / cm.sum(axis=0)
+    recall = cm.diagonal() / cm.sum(axis=1)
+    f1 = 2 * ((precision * recall)/(precision + recall))
+    return (precision, recall, f1)
 
 #############################
 # MultiClass Classification #
@@ -174,7 +197,7 @@ val_loss = hist.history['val_loss']
 
 ## Test performance
 print("Plotting confusion matrix...")
-cm = plot_confusion_matrix(M, X_test, np.argmax(y_test, axis=1),
+cm = plot_confusion_matrix(M, X_test, np.argmax(y_test, axis=1), range(0, len(CATEGORIES)),
                            os.path.join(datadir, "models",
                            model_type, "lr_confusion-matrix.png"))
 plt.close("all")
@@ -210,7 +233,7 @@ ccl_yT_pred = M.predict_classes(ccl_XT, verbose=0)
 
 ## Test performance on CCL
 print("Plotting confusion matrix...")
-ccl_cm = plot_confusion_matrix(M, ccl_XT, ccl_yT_class,
+ccl_cm = plot_confusion_matrix(M, ccl_XT, ccl_yT_class, range(0, len(CATEGORIES)),
                             os.path.join(ccldir, "models",
                             model_type, "CCLlr_confusion-matrix.png"))
 plt.close("all")
