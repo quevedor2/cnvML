@@ -62,6 +62,10 @@ class CNN:
 #################
 # Visualization #
 #################
+def plotX(X, outfile):
+    plt.imshow(X.reshape(IMG_SIZE, IMG_SIZE,3))
+    plt.savefig(outfile)
+    plt.close("all")
 
 def plot_loss_accuracy(hist, outfile):
     acc = hist.history['accuracy']
@@ -84,29 +88,51 @@ def plot_loss_accuracy(hist, outfile):
     fig.show()
     fig.savefig(outfile)
 
-def plot_confusion_matrix(model, X, y, outfile):
-    y_pred = model.predict_classes(X, verbose=0)
+def plot_confusion_matrix(model, X, y, range_y, outfile):
+    y_pred = list(model.predict_classes(X, verbose=0))
+    y = list(y)
     plt.figure(figsize=(8, 6))
+    
+    # Ensure that all the classes are represented
+    y.extend(list(range_y))
+    y_pred.extend(list(range_y))
     cm=confusion_matrix(y, y_pred)
+    np.fill_diagonal(cm, list(cm.diagonal()-1))
+    
+    # Make the heatmaps!!!
     sns.heatmap(pd.DataFrame(cm), annot=True, fmt='d', cmap='YlGnBu', alpha=0.8, vmin=0)
     plt.savefig(outfile)
     return cm
 
-def plot_class_cm(cm, outfile):
-    class_frac=cm.diagonal() / cm.sum(0)
+def plot_class_cm(cm, outfile,metric ='f1'):
+    (p, r, f1) = get_F1score(cm)
+    if (metric is 'f1'):
+        class_frac=f1
+    elif (metric is 'p'):
+        class_frac = p
+    else:
+        class_frac = r
+    
     class_frac=class_frac.round(2)
-    class_id=list(range(1, len(class_frac)+1))
-    class_df = pd.DataFrame({'ID':class_id, 'Frac':class_frac, 'Cnt':cm.diagonal(), 'Total':cm.sum(0)})
+    class_id=list(range(0, len(class_frac)))
+    class_df = pd.DataFrame({'ID':class_id, 'Frac':class_frac,
+                            'Cnt':cm.diagonal(), 'Total':cm.sum(0)})
     
     #b1=plt.bar("ID", "Total", data=class_df,class_id, class_frac)
     b2=plt.bar("ID", "Frac", data=class_df)
-    plt.rcParams["figure.figsize"] = [6,2]
+    plt.ylim((0,1))
+    #plt.rcParams["figure.figsize"] = [6,2]
     plt.xlabel("Cancer_Types")
-    plt.ylabel("Accuracy")
+    plt.ylabel(metric)
     plt.subplots_adjust(bottom=0.2, top=0.8)
     plt.xticks(class_id, rotation=90)
     plt.savefig(outfile)
 
+def get_F1score(cm):
+    precision = cm.diagonal() / cm.sum(axis=0)
+    recall = cm.diagonal() / cm.sum(axis=1)
+    f1 = 2 * ((precision * recall)/(precision + recall))
+    return (precision, recall, f1)
 
 ######################
 # Feature Extraction #
@@ -144,7 +170,8 @@ def fill_occ_array(p, IMG_SIZE=300, step=50):
 #############
 # Load Data #
 #############
-
+import imutils
+import cv2
 import pandas as pd
 import os
 from pathlib import Path
@@ -153,6 +180,7 @@ import matplotlib.pyplot as plt
 import pickle
 import sys
 import seaborn as sns
+from itertools import compress
 
 from sklearn.metrics import confusion_matrix, classification_report, r2_score
 from sklearn.model_selection import train_test_split
@@ -161,16 +189,23 @@ import tensorflow.keras
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D
 
-# VARIABLES
+os.chdir("/cluster/home/quever/git/cnvML")
+from pyimagesearch.gradcam import GradCAM
 
-PDIR='/cluster/projects/pughlab/projects/cancer_cell_lines/TCGA'
-DATADIR = os.path.join(PDIR, "data")
-OUTDIR = os.path.join(PDIR, "models")
+# VARIABLES
+PDIR='/cluster/projects/pughlab/projects/cancer_cell_lines'
+DATADIR = os.path.join(PDIR, "TCGA", "data")
+OUTDIR = os.path.join(PDIR, "TCGA", "models")
 IMG_SIZE=300
 model_type=sys.argv[1]
-
+CATEGORIES = ["ACC", "BLCA", "BRCA", "CESC", "CHOL", "COAD",
+              "DLBC", "ESCA", "GBM", "HNSC", "KICH", "KIRC",
+              "KIRP", "LAML", "LGG", "LIHC", "LUAD", "LUSC",
+              "MESO", "OV", "PAAD", "PCPG", "PRAD", "READ",
+              "SARC", "SKCM", "STAD", "TGCT", "THCA", "THYM",
+              "UCEC", "UCS", "UVM", "Normal"]
+              
 # Load data from TCGA Hilberts
-
 pickle_X = open(os.path.join(DATADIR, "X.pickle"), "rb")
 pickle_y = open(os.path.join(DATADIR, "y.pickle"), "rb")
 X = pickle.load(pickle_X)
@@ -204,7 +239,6 @@ x_test = x_test / 255
 ########################
 # Build/Train ConvNet #
 ########################
-
 if not os.path.exists(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2.h5')):
     M=CNN(y, width=IMG_SIZE, height=IMG_SIZE, channel=3)
     if model_type=='model1':
@@ -214,7 +248,7 @@ if not os.path.exists(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2.h5'
     else:
         print("no model selected")
         
-    hist = M.model.fit(x_train, y_train_one_hot, batch_size=32, epochs=20, validation_split=0.2)
+    hist = M.model.fit(x_train, y_train_one_hot, batch_size=32, epochs=10, validation_split=0.2)
     M.model.evaluate(x_test, y_test_one_hot)[1]
     M.model.save(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2.h5'))
     plot_loss_accuracy(hist, os.path.join(OUTDIR, model_type, "cnn_performance.png"))
@@ -227,12 +261,46 @@ else:
 # Spot-check model #
 ####################
 y_test_class = np.argmax(y_test_one_hot, axis=1)
-cm = plot_confusion_matrix(M, x_test, y_test_class,
+cm = plot_confusion_matrix(M, x_test, y_test_class, range(0, len(CATEGORIES)),
                            os.path.join(OUTDIR, model_type, "cnn_confusion-matrix.png"))
 plt.close("all")
 
 plot_class_cm(cm, os.path.join(OUTDIR, model_type, "cnn_cm_barplot.png"))
 plt.close("all")
+
+################################
+# Average Class-Activation Map #
+################################
+os.makedirs(os.path.join(PDIR, "TCGA", "ctype_avgs"))
+for ctype in list(range(y.min(), y.max()+1)):
+    print(CATEGORIES[ctype] + "-" + str(ctype))
+    ## Create an average representation of the cancer type
+    ov_idx = y == ctype
+    ctype_X = X[ov_idx[:,0],:]
+    ctype_X = ctype_X.mean(axis=0).astype("int")
+    
+    ## Plot the CN plot for an average cancer-type
+    plotX(ctype_X, os.path.join(PDIR, "TCGA", "ctype_avgs",
+        str(ctype) + "_" + CATEGORIES[ctype]))
+    
+    ## Plot the Class-activation map for an average cancer-type
+    ctype_X = ctype_X.astype("uint8")
+    image = np.expand_dims(ctype_X, axis=0)
+    image = image.astype('float32')
+    image = image / 255
+    
+    cam = GradCAM(M, ctype)
+    heatmap = cam.compute_heatmap(image)
+    heatmap = cv2.resize(heatmap, (IMG_SIZE, IMG_SIZE))
+    (heatmap, output) = cam.overlay_heatmap(heatmap, ctype_X, alpha=0.5)
+    output = np.vstack([ctype_X, heatmap, output])
+    output = imutils.resize(output, height=700)
+    cv2.imwrite(os.path.join(PDIR, "TCGA", "ctype_avgs",
+        "CAM_" + str(ctype) + "-" + CATEGORIES[ctype] + ".jpg"), output)
+    
+    ## Plot the Class-activation map for an average cancer-type
+    #plotX(ctype_X, os.path.join(PDIR, "TCGA", "ctype_avgs",
+    #    str(ctype) + "_" + CATEGORIES[ctype]))
 
 #################
 # Occlusion Map #
@@ -266,4 +334,72 @@ plt.contour(x3.reshape(IMG_SIZE, IMG_SIZE,3)[:,:,0],
             levels=np.logspace(np.quantile(x3, 0.05), np.quantile(x3, 0.25), np.quantile(x3, 0.5)),
             colors='black', alpha=1)
 plt.savefig(os.path.join(OUTDIR, model_type, "occlusion_p2.png"))
+plt.close("all")
+
+
+#####################################
+# Expand model to cancer cell lines #
+#####################################
+## Read in CCL data
+CCLDIR=Path(os.path.join(PDIR, 'CCL'))
+CCL_DATADIR=os.path.join(CCLDIR, "data")
+CCL_OUTDIR=os.path.join(CCLDIR, "models")
+
+alldata_X=np.empty([0,IMG_SIZE,IMG_SIZE,3])
+alldata_y=[]
+
+for dataset in ['CCLE', 'GNE', 'GDSC']:
+    ccl_pickle_X = open(os.path.join(CCL_DATADIR, dataset, "X.pickle"), "rb")
+    ccl_pickle_y = open(os.path.join(CCL_DATADIR, dataset, "y.pickle"), "rb")
+    ccl_X = pickle.load(ccl_pickle_X)
+    ccl_y = pickle.load(ccl_pickle_y)
+    
+    ccl_CAT=[]
+    for o in os.listdir(os.path.join(CCL_DATADIR, dataset)):
+        if os.path.isdir(os.path.join(CCL_DATADIR, dataset, o)):
+            ccl_CAT.append(o)
+    
+    ccl_y_verbose = [ccl_CAT[int(i)] for i in ccl_y]
+    ccl_tcga_ov = [elem in CATEGORIES for elem in ccl_y_verbose]
+    np.unique(ccl_tcga_ov, return_counts=True) # (array([False,  True]), array([544, 401]))
+    
+    # Format
+    ccl_X = ccl_X.astype('float32')
+    ccl_X = ccl_X / 255
+    
+    ccl_XT = ccl_X[ccl_tcga_ov,:]
+    ccl_yT = list(compress(ccl_y_verbose, ccl_tcga_ov))
+    
+    ## Do prediction testing
+    ccl_yT_class = [ CATEGORIES.index(x) for x in ccl_yT ]
+    ccl_yT_pred = M.predict_classes(ccl_XT, verbose=0)
+    
+    ## Append for ensemble analysis
+    alldata_X = np.concatenate((alldata_X, ccl_XT))
+    alldata_y.extend(ccl_yT_class)
+    
+    ## Test performance on CCL
+    print("Plotting confusion matrix...")
+    if(not os.path.isdir(os.path.join(CCLDIR, "models", model_type, dataset))):
+         os.makedirs(os.path.join(CCLDIR, "models", model_type, dataset))
+    ccl_cm = plot_confusion_matrix(M, ccl_XT, ccl_yT_class, range(0, len(CATEGORIES)),
+                                os.path.join(CCLDIR, "models",
+                                model_type, dataset, "CCLlr_confusion-matrix.png"))
+    plt.close("all")
+    
+    plot_class_cm(ccl_cm, os.path.join(CCLDIR, "models", model_type,
+        dataset, "CCL_cm_barplot.png"))
+
+
+print("Plotting confusion matrix...")
+if(not os.path.isdir(os.path.join(CCLDIR, "models", model_type, 'all'))):
+    os.makedirs(os.path.join(CCLDIR, "models", model_type, 'all'))
+
+ccl_cm = plot_confusion_matrix(M, alldata_X, alldata_y, range(0, len(CATEGORIES)),
+                            os.path.join(CCLDIR, "models",
+                            model_type, 'all', "CCLlr_confusion-matrix.png"))
+plt.close("all")
+
+plot_class_cm(ccl_cm, os.path.join(CCLDIR, "models", model_type,
+    'all', "CCL_cm_barplot.png"))
 plt.close("all")
