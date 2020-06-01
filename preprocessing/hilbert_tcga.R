@@ -59,6 +59,9 @@ for(seg_i in seg_files){
     colnames(segd)[c(1:3,6,11,7,8)] <- c('chrom', 'loc.start', 'loc.end',
                                   'Sample', 'Modal_Total_CN', 
                                   'Modal_HSCN_1', 'Modal_HSCN_2')
+    if(any(segd$chrom %in% c('chrX', 'chrY'))){
+      segd <- segd[-which(segd$chrom %in% c('chrX', 'chrY')),]
+    }
   }
   
   
