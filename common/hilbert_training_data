@@ -16,7 +16,7 @@ PDIR='/cluster/projects/pughlab/projects/cancer_cell_lines/' + analysis
 if(analysis is 'CCL'):
 	DATADIRS=[os.path.join(PDIR, "data", x) for x in ['GDSC', 'CCLE', 'GNE']]
 else:
-	DATADIRS=os.path.join(PDIR, "data")
+	DATADIRS=[os.path.join(PDIR, "data")]
 	# All the categories you want your neural network to detect
 	CATEGORIES = ["ACC", "BLCA", "BRCA", "CESC", "CHOL", "COAD",
 				  "DLBC", "ESCA", "GBM", "HNSC", "KICH", "KIRC",
