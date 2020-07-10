@@ -1,0 +1,296 @@
+#############################
+# MultiClass Classification #
+#############################
+# PURPOSE:
+#################
+# Preprocessing #
+#################
+def balanceGrp(df, q=0.5):
+    cnts = df.cancer_type.value_counts()
+    target_n = int(np.quantile(cnts, q))
+    min_n = int(target_n/4)
+    
+    # Divide by class
+    ctypes = df.cancer_type.unique()
+    ctypes = ctypes.tolist()
+    ctypes = [ x for x in ctypes if str(x) != 'nan' ]
+    
+    frames = []
+    for ctype in ctypes:
+        df_ctype = df[df.cancer_type == ctype]
+        if df_ctype.shape[0] < min_n:
+            print(ctype + " [Remove]: " + str(df_ctype.shape[0])
+                + " < " + str(min_n))
+            df_ctype = df_ctype.sample(0, replace=True)
+        elif df_ctype.shape[0] < target_n:
+            print(ctype + " [Upsample]: " + str(df_ctype.shape[0])
+                + " < " + str(target_n))
+            df_ctype = df_ctype.sample(target_n, replace=True)
+        elif df_ctype.shape[0] > target_n:
+            print(ctype + " [Downsample]: " + str(df_ctype.shape[0])
+                + " > " + str(target_n))
+            df_ctype = df_ctype.sample(target_n, replace=False)
+        else :
+            df_ctype = df_ctype
+        frames.append(df_ctype)
+    
+    df2 = pd.concat(frames)
+    return df2
+
+#################
+# Visualization #
+#################
+def plot_loss_accuracy(hist, outfile):
+    acc = hist.history['accuracy']
+    val_acc = hist.history['val_accuracy']
+    loss = hist.history['loss']
+    val_loss = hist.history['val_loss']
+    
+    fig, (ax1, ax2) = plt.subplots(2, sharex=True)
+    ax1.plot(acc, label='Training Accuracy')
+    ax1.plot(val_acc, label='Validation Accuracy')
+    ax1.legend(loc='lower right')
+    ax1.set_ylabel('Accuracy')
+    ax1.set_ylim(0, 1.0) #([min(plt.ylim()),1])
+    
+    ax2.plot(loss, label='Training Loss')
+    ax2.plot(val_loss, label='Validation Loss')
+    ax2.legend(loc='upper right')
+    ax2.set_ylabel('Cross Entropy')
+    ax2.set_xlabel('epoch')
+    fig.show()
+    fig.savefig(outfile)
+
+def plot_confusion_matrix(model, X, y, range_y, outfile):
+    y_pred = list(model.predict_classes(X, verbose=0))
+    y = list(y)
+    plt.figure(figsize=(8, 6))
+    
+    # Ensure that all the classes are represented
+    y.extend(list(range_y))
+    y_pred.extend(list(range_y))
+    cm=confusion_matrix(y, y_pred)
+    np.fill_diagonal(cm, list(cm.diagonal()-1))
+    
+    # Make the heatmaps!!!
+    sns.heatmap(pd.DataFrame(cm), annot=True, fmt='d', cmap='YlGnBu', alpha=0.8, vmin=0)
+    plt.savefig(outfile)
+    return cm
+
+def plot_class_cm(cm, outfile,metric ='f1'):
+    (p, r, f1) = get_F1score(cm)
+    if (metric is 'f1'):
+        class_frac=f1
+    elif (metric is 'p'):
+        class_frac = p
+    else:
+        class_frac = r
+    
+    class_frac=class_frac.round(2)
+    class_id=list(range(0, len(class_frac)))
+    class_df = pd.DataFrame({'ID':class_id, 'Frac':class_frac,
+                            'Cnt':cm.diagonal(), 'Total':cm.sum(0)})
+    
+    #b1=plt.bar("ID", "Total", data=class_df,class_id, class_frac)
+    b2=plt.bar("ID", "Frac", data=class_df)
+    plt.ylim((0,1))
+    #plt.rcParams["figure.figsize"] = [6,2]
+    plt.xlabel("Cancer_Types")
+    plt.ylabel(metric)
+    plt.subplots_adjust(bottom=0.2, top=0.8)
+    plt.xticks(class_id, rotation=90)
+    plt.savefig(outfile)
+    
+    return f1
+
+def get_F1score(cm):
+    precision = cm.diagonal() / cm.sum(axis=0)
+    recall = cm.diagonal() / cm.sum(axis=1)
+    f1 = 2 * ((precision * recall)/(precision + recall))
+    return (precision, recall, f1)
+
+#############################
+# MultiClass Classification #
+#############################
+class MulticlassModels:
+    def __init__(self, X, y, model=0):
+        self.X = X
+        self.y = y
+        self.model=model
+    
+    def sr_model(self):
+        print("Softmax-regression model")
+        sr_model = Sequential()
+        sr_model.add(Dense(y.shape[1], input_shape=(X.shape[1],), activation='softmax'))
+        
+        sr_model.compile(loss='categorical_crossentropy',
+                         optimizer='adam',
+                         metrics=['accuracy'])
+        self.model=sr_model
+    
+    def ann_model(self):
+        print("ANN model")
+        #hidden_n=(X.shape[1] - y.shape[1])/40
+        transfer_n=512
+        hidden_n=(transfer_n * 1)
+        deep_model = Sequential()
+        deep_model.add(Dense(int(hidden_n), input_shape=(X.shape[1],), activation='relu'))
+        deep_model.add(Dropout(rate=0.20))
+        deep_model.add(Dense(transfer_n, activation='relu', name='transfer_1'))
+        deep_model.add(Dense(y.shape[1], activation='softmax'))
+        
+        deep_model.compile(loss='categorical_crossentropy',
+                           optimizer='adam',
+                           metrics=['accuracy'])
+        self.model=deep_model
+
+
+###########
+# Modules #
+###########
+import pandas as pd
+import os
+from pathlib import Path
+import numpy as np
+import matplotlib.pyplot as plt
+import sys
+import seaborn as sns
+
+from sklearn.preprocessing import StandardScaler, LabelEncoder, OneHotEncoder, MinMaxScaler
+from sklearn.model_selection import train_test_split, cross_val_score, StratifiedKFold, KFold
+from sklearn.metrics import confusion_matrix, classification_report, mean_squared_error, mean_absolute_error, r2_score
+from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.layers import Dense, Dropout, BatchNormalization, Activation
+from tensorflow.keras.optimizers import Adam
+import tensorflow as tf
+
+######################################
+# Data Visualization & Preprocessing #
+######################################
+CATEGORIES = ["ACC", "BLCA", "BRCA", "CESC", "CHOL", "COAD",
+			  "DLBC", "ESCA", "GBM", "HNSC", "KICH", "KIRC",
+			  "KIRP", "LAML", "LGG", "LIHC", "LUAD", "LUSC",
+			  "MESO", "OV", "PAAD", "PCPG", "PRAD", "READ",
+			  "SARC", "SKCM", "STAD", "TGCT", "THCA", "THYM",
+			  "UCEC", "UCS", "UVM", "Normal"]
+
+ref_analysis='TCGA_bin' #'TCGA_genes', 'TCGA_bin'
+ccl_analysis='CCL_genes'
+pdir='/cluster/projects/pughlab/projects/cancer_cell_lines/'
+datadir=Path(os.path.join(pdir, ref_analysis))
+os.chdir(datadir)
+df = pd.read_csv(datadir / 'data' / 'Modal_Total_CN_matrix.csv')
+df = df.drop([df.columns[0]], axis=1)
+df = balanceGrp(df, q=0.5)
+model_type=sys.argv[1] # 'ann' or 'lr'
+
+## Feature scaling and organizing X and y
+X = df.values[:, :-1]
+X = X.astype("float")
+X[np.isnan(X)] = 2
+ss = StandardScaler() ## purpose: zero mean & unit STDERR
+X = ss.fit_transform(X) ## Calculate parameters (mu, std) and transforms
+# ss.transform() uses the learnt paramters only:
+# stackexchange: difference-between-fit-and-fit-transform-in-scikit-learn-models
+
+#ss = StandardScaler()
+#X2 = ss.fit_transform(X)
+y = pd.get_dummies(df['cancer_type']).values
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=1234)
+del df
+
+## setup and fit a multi-class logistic regression model
+if not os.path.exists(os.path.join(datadir, 'models', model_type, 'model.h5')):
+    M = MulticlassModels(X, y)
+    if model_type == 'lr':
+        M.sr_model()
+    elif model_type == 'ann':
+        M.ann_model()
+    else:
+        print("no model selected")
+    
+    hist = M.model.fit(X_train, y_train, epochs=10,  #epochs=25
+        verbose=1, validation_split=0.2)
+    M.model.save(os.path.join(datadir, 'models', model_type, 'model.h5'))
+    M = M.model
+else:
+    print("Loading existing model...")
+    M = load_model(os.path.join(datadir, 'models', model_type, 'model.h5'))
+
+#y_pred_class = M.model.predict_classes(X_test, verbose=0)
+#y_test_class = np.argmax(y_test, axis=1)
+#print(classification_report(y_test_class, y_pred_class))
+#plot_confusion_matrix(M.model, X_test, y_test_class)
+
+###################
+# Extract Weights #
+###################
+W = np.asmatrix(M.get_weights()[0])
+np.savetxt(os.path.join(datadir, 'models', model_type, 'weights.csv'),
+    W, fmt='%5.2f', delimiter=",")
+    
+W_ord = W.argsort(axis=0)
+np.savetxt(os.path.join(datadir, 'models', model_type, 'weights_ord.csv'),
+    W_ord.astype(int), fmt='%i', delimiter=",")
+
+####################
+# Spot-check model #
+####################
+## Training performance
+hist = M.history
+plot_loss_accuracy(hist, os.path.join(datadir, 'models', model_type, "performance.png"))
+plt.close("all")
+acc = hist.history['accuracy']
+val_acc = hist.history['val_accuracy']
+
+loss = hist.history['loss']
+val_loss = hist.history['val_loss']
+
+## Test performance
+print("Plotting confusion matrix...")
+cm = plot_confusion_matrix(M, X_test, np.argmax(y_test, axis=1), range(0, len(CATEGORIES)),
+                           os.path.join(datadir, "models",
+                           model_type, "lr_confusion-matrix.png"))
+plt.close("all")
+
+f1 = plot_class_cm(cm, os.path.join(datadir, "models",
+                   model_type, "cnn_cm_barplot.png"))
+np.savetxt(os.path.join(datadir, 'models', model_type, 'F1_test.csv'),
+    f1, fmt='%5.2f', delimiter=",")
+plt.close("all")
+
+
+#####################################
+# Expand model to cancer cell lines #
+#####################################
+## Read in CCL data
+ccldir=Path(os.path.join(pdir, ccl_analysis))
+
+ccl_df = pd.read_csv(ccldir / 'data' / 'Modal_Total_CN_matrix.csv')
+ccl_df = ccl_df.drop([ccl_df.columns[0]], axis=1)
+
+## Feature scaling and organizing X and y
+ccl_X = ccl_df.values[:, :-1].astype("float")
+ccl_X[np.isnan(ccl_X)] = 2
+
+## Map only cell line Oncocodes that overlap with TCGA
+ccl_tcga_ov = ccl_df['cancer_type'].isin(CATEGORIES)
+ccl_tcga_ov.value_counts() #False    1522; True     1257
+
+ccl_XT = ccl_X[ccl_tcga_ov,:]
+ccl_yT = ccl_df['cancer_type'][ccl_tcga_ov]
+    
+## Do prediction testing
+ccl_yT_class = [CATEGORIES.index(x) for x in ccl_yT]
+ccl_yT_pred = M.predict_classes(ccl_XT, verbose=0)
+
+## Test performance on CCL
+print("Plotting confusion matrix...")
+ccl_cm = plot_confusion_matrix(M, ccl_XT, ccl_yT_class, range(0, len(CATEGORIES)),
+                            os.path.join(ccldir, "models",
+                            model_type, "CCLlr_confusion-matrix.png"))
+plt.close("all")
+
+plot_class_cm(ccl_cm, os.path.join(ccldir, "models",
+            model_type, "CCL_cm_barplot.png"))
+plt.close("all")
