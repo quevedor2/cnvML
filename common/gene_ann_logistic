@@ -2,6 +2,40 @@
 # MultiClass Classification #
 #############################
 # PURPOSE:
+#################
+# Preprocessing #
+#################
+def balanceGrp(df, q=0.5):
+    cnts = df.cancer_type.value_counts()
+    target_n = int(np.quantile(cnts, q))
+    min_n = int(target_n/4)
+    
+    # Divide by class
+    ctypes = df.cancer_type.unique()
+    ctypes = ctypes.tolist()
+    ctypes = [ x for x in ctypes if str(x) != 'nan' ]
+    
+    frames = []
+    for ctype in ctypes:
+        df_ctype = df[df.cancer_type == ctype]
+        if df_ctype.shape[0] < min_n:
+            print(ctype + " [Remove]: " + str(df_ctype.shape[0])
+                + " < " + str(min_n))
+            df_ctype = df_ctype.sample(0, replace=True)
+        elif df_ctype.shape[0] < target_n:
+            print(ctype + " [Upsample]: " + str(df_ctype.shape[0])
+                + " < " + str(target_n))
+            df_ctype = df_ctype.sample(target_n, replace=True)
+        elif df_ctype.shape[0] > target_n:
+            print(ctype + " [Downsample]: " + str(df_ctype.shape[0])
+                + " > " + str(target_n))
+            df_ctype = df_ctype.sample(target_n, replace=False)
+        else :
+            df_ctype = df_ctype
+        frames.append(df_ctype)
+    
+    df2 = pd.concat(frames)
+    return df2
 
 #################
 # Visualization #
@@ -87,17 +121,27 @@ class MulticlassModels:
         sr_model = Sequential()
         sr_model.add(Dense(y.shape[1], input_shape=(X.shape[1],), activation='softmax'))
         
-        sr_model.compile(Adam(lr=0.1), loss='categorical_crossentropy', metrics=['accuracy'])
+        #sr_model.compile(Adam(lr=0.1), loss='categorical_crossentropy', metrics=['accuracy'])
+        sr_model.compile(loss='categorical_crossentropy',
+                           optimizer='adam',
+                           metrics=['accuracy'])
         self.model=sr_model
     
     def ann_model(self):
         print("ANN model")
+        #hidden_n=(X.shape[1] - y.shape[1])/20
+        transfer_n = 512
+        hidden_n = (transfer_n * 2.5)
+        
         deep_model = Sequential()
-        deep_model.add(Dense(7310*3, input_shape=(X.shape[1],), activation='relu'))
-        deep_model.add(Dense(7310, input_shape=(X.shape[1],), activation='relu'))
+        deep_model.add(Dense(int(hidden_n), input_shape=(X.shape[1],), activation='relu'))
+        deep_model.add(Dropout(rate=0.20))
+        deep_model.add(Dense(transfer_n, activation='relu', name='transfer_1'))
         deep_model.add(Dense(y.shape[1], activation='softmax'))
         
-        deep_model.compile(Adam(lr=0.01), loss='categorical_crossentropy', metrics=['accuracy'])
+        deep_model.compile(loss='categorical_crossentropy',
+                           optimizer='adam',
+                           metrics=['accuracy'])
         self.model=deep_model
 
 
@@ -130,24 +174,32 @@ CATEGORIES = ["ACC", "BLCA", "BRCA", "CESC", "CHOL", "COAD",
 			  "SARC", "SKCM", "STAD", "TGCT", "THCA", "THYM",
 			  "UCEC", "UCS", "UVM", "Normal"]
               
-ref_analysis='TCGA_genes'
+ref_analysis='TCGA_genes' #'TCGA_genes', 'TCGA_bin'
 ccl_analysis='CCL_genes'
 pdir='/cluster/projects/pughlab/projects/cancer_cell_lines/'
 datadir=Path(os.path.join(pdir, ref_analysis))
 os.chdir(datadir)
 df = pd.read_csv(datadir / 'data' / 'Modal_Total_CN_matrix.csv')
 df = df.drop([df.columns[0]], axis=1)
+df = balanceGrp(df, q=0.5)
 model_type=sys.argv[1] # 'ann' or 'lr'
 
 ## Feature scaling and organizing X and y
 X = df.values[:, :-1]
 X = X.astype("float")
 X[np.isnan(X)] = 2
-#ss = StandardScaler()
-#X2 = ss.fit_transform(X)
+ss = StandardScaler() ## purpose: zero mean & unit STDERR
+X = ss.fit_transform(X) ## Calculate parameters (mu, std) and transforms
+# ss.transform() uses the learnt paramters only:
+# stackexchange: difference-between-fit-and-fit-transform-in-scikit-learn-models
 y = pd.get_dummies(df['cancer_type']).values
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=1234)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2,
+    random_state=1234)
 
+M = MulticlassModels(X, y)
+M.ann_model()
+hist = M.model.fit(X_train, y_train, epochs=25,
+    verbose=1, validation_split=0.2)
 ## setup and fit a multi-class logistic regression model
 if not os.path.exists(os.path.join(datadir, 'models', model_type, 'model.h5')):
     M = MulticlassModels(X, y)
