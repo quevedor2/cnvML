@@ -32,6 +32,16 @@ addCumPos <- function(dat, ref, dat.type){
 
 ##############
 #### Main ####
+chr.size.dat <- getChrLength()
+seqlevelsStyle(chr.size.dat) <- 'NCBI'
+scale <- 1e4
+order=8
+a_col=c("black", "red")
+b_col=c("black", "blue")
+breaks <- seq(0, 5, by=0.1)
+#col2rgb(colorRampPalette(a_col)(length(breaks)))
+#col2rgb(colorRampPalette(b_col)(length(breaks)))
+
 analysis <- 'ccl_aggregate'
 PDIR <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines'
 if(analysis=='TCGA'){
@@ -65,16 +75,6 @@ for(seg_i in seg_files){
   }
   
   
-  chr.size.dat <- getChrLength()
-  seqlevelsStyle(chr.size.dat) <- 'NCBI'
-  scale <- 1e5
-  order=7
-  a_col=c("black", "red")
-  b_col=c("black", "blue")
-  breaks <- seq(0, 5, by=0.1)
-  #col2rgb(colorRampPalette(a_col)(length(breaks)))
-  #col2rgb(colorRampPalette(b_col)(length(breaks)))
-  
   segl <- split(segd, segd$Sample)
   
   hilberts <- lapply(segl, function(seg){
@@ -93,7 +93,7 @@ for(seg_i in seg_files){
       png(file.path(PDIR, analysis, "output", "hilbert", paste0(sample_id, ".png")), 
           width=300, height=300)
       hc = HilbertCurve(1, max(chr.size.dat$cum.end)/scale, level = order, mode = "pixel", 
-                        reference = TRUE) # title = basename(segf), 
+                        reference = TRUE, padding=unit(1, "mm")) # title = basename(segf), 
       a1 = circlize::colorRamp2(breaks = breaks,
                                 colors = colorRampPalette(a_col)(length(breaks)))
       a2 = circlize::colorRamp2(breaks = breaks,

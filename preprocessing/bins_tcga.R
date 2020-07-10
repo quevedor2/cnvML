@@ -64,20 +64,23 @@ hilbertBinSize <- function(order, scale, chr.size.dat){
 
 ##############
 #### Main ####
-## Load in Metadata
-METADIR='/mnt/work1/users/pughlab/projects/cancer_cell_lines/TCGA'
-META <- file.path(METADIR, 'input/merged_sample_quality_annotations.trimmed.tsv')
-meta <- read.table(META, header=TRUE, check.names = FALSE, 
-                   sep="\t", stringsAsFactors = FALSE)
-m_idx <- NULL
-
 ## Load in SEG files
-analysis <- 'TCGA'
+analysis <- 'ccl_aggregate'
+m_idx <- NULL
 PDIR <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines'
 if(analysis=='TCGA'){
   seg_files <- "TCGA_mastercalls.abs_segtabs.fixed.txt"
+  METADIR='/mnt/work1/users/pughlab/projects/cancer_cell_lines/TCGA'
+  META <- file.path(METADIR, 'input/merged_sample_quality_annotations.trimmed.tsv')
+  meta <- read.table(META, header=TRUE, check.names = FALSE, 
+                     sep="\t", stringsAsFactors = FALSE)
 } else if(analysis=='ccl_aggregate'){
   seg_files <- c('CCLE_cna_hg19.seg', 'GDSC_cna_hg19.seg', 'gCSI_cna_hg19.seg')
+  META <- file.path(PDIR, analysis, "ref", "onco_meta_df.rds")
+  meta <- readRDS(META)
+  meta$GDSC <- gsub(".cel$", "", meta$GDSC, ignore.case = TRUE)
+  colnames(meta) <- gsub("oncocode", "cancer type", colnames(meta))
+  colnames(meta) <- gsub("^GNE$", "gCSI", colnames(meta))
 } else {
   stop("Analysis must be either 'TCGA' or 'ccl_aggregate'")
 }
@@ -86,10 +89,12 @@ dir.create(OUTDIR, recursive = TRUE, showWarnings = FALSE)
 
 chr.size.dat <- getChrLength()
 seqlevelsStyle(chr.size.dat) <- 'NCBI'
-scale <- 1e5
-order=7
+scale <- 1e4
+order=8
 
 for(seg_i in seg_files){
+  ds_id <- gsub("_.*", "", seg_i)
+  print(paste0(ds_id, "..."))
   segf <- file.path(PDIR, analysis, "input", seg_i)
   segd <- read.table(segf, sep="\t", header=TRUE, stringsAsFactors = FALSE)
   segd <- formatSeg(segd, analysis, PDIR=PDIR)
@@ -107,7 +112,7 @@ for(seg_i in seg_files){
   
   blank_l2r <- setNames(rep(NA, length(bins_gr)), bins_gr$ID)
   seg_l <- split(seg_gr, seg_gr$Sample)
-  modal <- paste0("Modal_", c('Total_CN', 'HSCN_1')) #'HSCN_2', 
+  modal <- paste0("Modal_", c('Total_CN', 'HSCN_2', 'HSCN_1')) # 
   for(m in modal){
     print(paste0(m, "..."))
     l2r_mat <- sapply(seg_l, function(seg){
@@ -118,14 +123,17 @@ for(seg_i in seg_files){
     })
     l2r_mat <- as.data.frame(t(l2r_mat))
     
-    if(is.null(m_idx)){
-      m_idx <- sapply(rownames(l2r_mat), function(i) grep(paste0("^", i), 
-                                                          x=meta$aliquot_barcode)[1])
-    }
-    l2r_mat$cancer_type <- meta[m_idx,]$`cancer type`
+    ds <- switch(analysis,
+                 TCGA='aliquot_barcode',
+                 ccl_aggregate=gsub("_.*", "", seg_i))
+    m_idx <- sapply(rownames(l2r_mat), 
+                    function(i) grep(paste0("^", i), 
+                                     x=meta[,ds])[1])
+    l2r_mat$cancer_type <- gsub(":.*", "", as.character(meta[m_idx,]$`cancer type`))
     l2r_mat$cancer_type[grep("^HG0", rownames(l2r_mat))] <- 'Normal'
 
-    write.table(l2r_mat, file=file.path(OUTDIR, paste0(m, ".csv")), sep=",",
-                col.names=TRUE, row.names=TRUE, quote=FALSE)
+    dir.create(file.path(OUTDIR, ds_id), recursive = TRUE, showWarnings = FALSE)
+    write.table(l2r_mat, file=file.path(OUTDIR, ds_id, paste0(m, "_matrix.csv")), 
+                sep=",", col.names=TRUE, row.names=TRUE, quote=FALSE)
   }
 }
