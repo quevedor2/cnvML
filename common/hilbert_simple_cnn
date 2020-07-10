@@ -1,15 +1,52 @@
+#################
+# Preprocessing #
+#################
+def balanceGrp(X, y, q=0.5):
+    cnts = np.unique(y, return_counts=True)
+    target_n = int(np.quantile(cnts[1], q))
+    min_n = int(target_n/4)
+    frames = np.zeros((len(cnts[0])*target_n, 1))
+    for ctype in cnts[0]:
+        fill_idx = int(np.argwhere(ctype==cnts[0])) * target_n
+        ctype_idx = np.argwhere(y==ctype)
+        np.random.seed(seed=1234)
+        
+        if ctype_idx.shape[0] < min_n:
+            print(str(ctype) + " [Remove]: " + str(ctype_idx.shape[0])
+                + " < " + str(min_n))
+            sample_idx = np.zeros(target_n) - 1
+        elif ctype_idx.shape[0] < target_n:
+            print(str(ctype) + " [Upsample]: " + str(ctype_idx.shape[0])
+                + " < " + str(target_n))
+            sample_idx = np.random.choice(ctype_idx[:,0],
+                                          size=target_n, replace=True)
+        elif ctype_idx.shape[0] > target_n:
+            print(str(ctype) + " [Downsample]: " + str(ctype_idx.shape[0])
+                + " > " + str(target_n))
+            sample_idx = np.random.choice(a=ctype_idx[:,0], size=target_n,
+                                          replace=False)
+        else:
+            sample_idx = ctype_idx[:,0]
+        frames[fill_idx:fill_idx+target_n,0] = sample_idx
+    
+    
+    frames = frames[frames[:,0] >= 0,:]
+    X_bal=X[frames[:,0].astype('int'),:,:,:]
+    y_bal=y[frames[:,0].astype('int'),:]
+    return X_bal,y_bal
+
 ##############
 # CNN Models #
 ##############
-
 class CNN:
-    def __init__(self, y, width, height, channel, model=0):
+    def __init__(self, y=0, width=300, height=300, channel=3, model=0, fine_tune_at=0):
         self.y=y
         self.width=width
         self.height=height
         self.channel=channel
         self.model=model
         self.img_size=[width, height, channel]
+        self.fine_tune_at=fine_tune_at
     
     def model_one(self):
         print("CNN model 1")
@@ -48,16 +85,29 @@ class CNN:
         model.add(Conv2D(128, (3, 3), activation='relu', padding='same', name='conv_4'))
         model.add(MaxPooling2D((2, 2), name='maxpool_4'))
         model.add(Flatten())
-        model.add(Dropout(0.5))
+        model.add(Dropout(rate=0.25))
         
         model.add(Dense(512, activation='relu', name='dense_1'))
-        model.add(Dropout(rate=0.20))
+        #model.add(Dropout(rate=0.20))
         model.add(Dense(units=self.y.max()+1, activation='softmax'))
         
         model.compile(optimizer='adam',
                       loss='categorical_crossentropy',
                       metrics=['accuracy'])
         self.model=model
+    
+    def transfer(self):
+        print("Transfer learning at layer " + str(self.fine_tune_at))
+        # Freeze all layers
+        self.model.trainable = True
+        
+        # Make top layers trainable
+        for layer in self.model.layers[:self.fine_tune_at]:
+          layer.trainable =  False
+        self.model.compile(optimizer='adam',
+                           loss='categorical_crossentropy',
+                           metrics=['accuracy'])
+
 
 #################
 # Visualization #
@@ -210,6 +260,7 @@ pickle_X = open(os.path.join(DATADIR, "X.pickle"), "rb")
 pickle_y = open(os.path.join(DATADIR, "y.pickle"), "rb")
 X = pickle.load(pickle_X)
 y = pickle.load(pickle_y)
+X,y = balanceGrp(X, y, q=0.5)
 #plt.imshow(X[2,].reshape(IMG_SIZE, IMG_SIZE,3))
 #plt.savefig(os.path.join(OUTDIR, model_type, "class_25.png"))
 #plt.close("all")
@@ -298,9 +349,20 @@ for ctype in list(range(y.min(), y.max()+1)):
     cv2.imwrite(os.path.join(PDIR, "TCGA", "ctype_avgs",
         "CAM_" + str(ctype) + "-" + CATEGORIES[ctype] + ".jpg"), output)
     
-    ## Plot the Class-activation map for an average cancer-type
-    #plotX(ctype_X, os.path.join(PDIR, "TCGA", "ctype_avgs",
-    #    str(ctype) + "_" + CATEGORIES[ctype]))
+    ## Plot occlusion map
+    #occ_array = create_occlusion_dataset(image[0,:].copy(), M, IMG_SIZE, 10)
+    #occ_prob=M.predict_proba(occ_array, verbose=False)
+    #occ_viz=fill_occ_array(occ_prob[:,ctype], IMG_SIZE,10)
+    #heatmap = winsorize_heatmap(occ_viz, IMG_SIZE, winsor_hi=0.99)
+    
+    #(heatmap, overlap) = overlay_heatmap(heatmap, ctype_X,
+    #    alpha=0.5, colormap=cv2.COLORMAP_INFERNO)
+    #output = np.vstack([ctype_X, heatmap, overlap])
+    #output = imutils.resize(output, height=700)
+    #cv2.imwrite(os.path.join(PDIR, "TCGA", "ctype_avgs",
+    #    "OCC_" + str(ctype) + "-" + CATEGORIES[ctype] + ".jpg"), output)
+
+
 
 #################
 # Occlusion Map #
@@ -403,3 +465,91 @@ plt.close("all")
 plot_class_cm(ccl_cm, os.path.join(CCLDIR, "models", model_type,
     'all', "CCL_cm_barplot.png"))
 plt.close("all")
+
+############################
+# Transfer learning to CCL #
+############################
+CCLDIR=Path(os.path.join(PDIR, 'CCL'))
+CCL_DATADIR=os.path.join(CCLDIR, "data")
+CCL_OUTDIR=os.path.join(CCLDIR, "models")
+dataset = 'GDSC'
+ccl_pickle_X = open(os.path.join(CCL_DATADIR, dataset, "X.pickle"), "rb")
+ccl_pickle_y = open(os.path.join(CCL_DATADIR, dataset, "y.pickle"), "rb")
+ccl_X = pickle.load(ccl_pickle_X)
+ccl_y = pickle.load(ccl_pickle_y)
+
+ccl_CAT=[]
+for o in os.listdir(os.path.join(CCL_DATADIR, dataset)):
+    if os.path.isdir(os.path.join(CCL_DATADIR, dataset, o)):
+        ccl_CAT.append(o)
+
+ccl_y_verbose = [ccl_CAT[int(i)] for i in ccl_y]
+ccl_tcga_ov = [elem in CATEGORIES for elem in ccl_y_verbose]
+
+# Format
+ccl_XT = ccl_X[ccl_tcga_ov,:]
+ccl_XT = ccl_XT.astype('float32')
+ccl_XT = ccl_XT / 255
+
+ccl_yT = list(compress(ccl_y_verbose, ccl_tcga_ov))
+ccl_yT_class = [ CATEGORIES.index(x) for x in ccl_yT ]
+#ccl_XT,ccl_yT_class = balanceGrp(ccl_XT, np.c_[ccl_yT_class], q=0.5)
+y_ccl_one_hot = tensorflow.keras.utils.to_categorical(ccl_yT_class, y.max()+1)
+
+Mcnn = CNN(model=M, fine_tune_at=10)
+Mcnn.transfer()
+hist_ccl = Mcnn.model.fit(ccl_XT, y_ccl_one_hot, batch_size=32, epochs=5, validation_split=0.2)
+
+Mnaive=CNN(y, width=IMG_SIZE, height=IMG_SIZE, channel=3)
+Mnaive.model_two()
+hist_Nccl = Mnaive.model.fit(ccl_XT, y_ccl_one_hot, batch_size=32, epochs=5, validation_split=0.2)
+
+for tl in ['transfer', 'naive']:
+    if tl == 'transfer':
+        M = Mcnn.model
+    else:
+        M = Mnaive.model
+    alldata_X=np.empty([0,IMG_SIZE,IMG_SIZE,3])
+    alldata_y=[]
+    
+    for dataset in ['CCLE', 'GNE', 'GDSC']:
+        ccl_pickle_X = open(os.path.join(CCL_DATADIR, dataset, "X.pickle"), "rb")
+        ccl_pickle_y = open(os.path.join(CCL_DATADIR, dataset, "y.pickle"), "rb")
+        ccl_X = pickle.load(ccl_pickle_X)
+        ccl_y = pickle.load(ccl_pickle_y)
+        
+        ccl_CAT=[]
+        for o in os.listdir(os.path.join(CCL_DATADIR, dataset)):
+            if os.path.isdir(os.path.join(CCL_DATADIR, dataset, o)):
+                ccl_CAT.append(o)
+        
+        ccl_y_verbose = [ccl_CAT[int(i)] for i in ccl_y]
+        ccl_tcga_ov = [elem in CATEGORIES for elem in ccl_y_verbose]
+        np.unique(ccl_tcga_ov, return_counts=True) # (array([False,  True]), array([544, 401]))
+        
+        # Format
+        ccl_X = ccl_X.astype('float32')
+        ccl_X = ccl_X / 255
+        
+        ccl_XT = ccl_X[ccl_tcga_ov,:]
+        ccl_yT = list(compress(ccl_y_verbose, ccl_tcga_ov))
+        
+        ## Do prediction testing
+        ccl_yT_class = [ CATEGORIES.index(x) for x in ccl_yT ]
+        ccl_yT_pred = M.predict_classes(ccl_XT, verbose=0)
+        
+        ## Append for ensemble analysis
+        alldata_X = np.concatenate((alldata_X, ccl_XT))
+        alldata_y.extend(ccl_yT_class)
+        
+        ## Test performance on CCL
+        print("Plotting confusion matrix...")
+        if(not os.path.isdir(os.path.join(CCLDIR, "models", model_type, dataset))):
+             os.makedirs(os.path.join(CCLDIR, "models", model_type, dataset))
+        ccl_cm = plot_confusion_matrix(M, ccl_XT, ccl_yT_class, range(0, len(CATEGORIES)),
+                                    os.path.join(CCLDIR, "models",
+                                    model_type, dataset, tl  + "_CCLlr_confusion-matrix.png"))
+        plt.close("all")
+        
+        plot_class_cm(ccl_cm, os.path.join(CCLDIR, "models", model_type,
+            dataset, tl  + "_CCL_cm_barplot.png"))
