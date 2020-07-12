@@ -43,7 +43,7 @@ class Occlusion:
         self.step = step
         self.occ_array = occ_ret
     
-    def overlay_heatmap(heatmap, image, alpha=0.5, colormap=cv2.COLORMAP_VIRIDIS):
+    def overlay_heatmap(self, heatmap, image, alpha=0.5, colormap=cv2.COLORMAP_VIRIDIS):
         heatmap = cv2.applyColorMap(heatmap, colormap)
         output = cv2.addWeighted(image, alpha, heatmap, 1 - alpha, 0)
         return (heatmap, output)
@@ -74,4 +74,11 @@ class Occlusion:
         denom = np.where(denom > 1, 1, denom)
         
         heatmap = cv2.resize(((numer / denom)*255).astype('uint8'), (self.IMG_SIZE, self.IMG_SIZE))
-        return(heatmap)
+        return(heatmap[:,:,0])
+    
+    def quantile_match(self, hmap1, hmap2):
+        percentiles = np.argsort(np.argsort(c1)) * 100. / (len(c1) - 1)
+        c0 = np.quantile(hmap2, np.round(percentiles/100, 2))
+        hmap0 = c0.reshape((IMG_SIZE, IMG_SIZE))
+        hmap0 = hmap0.astype("uint8")
+        return hmap0
