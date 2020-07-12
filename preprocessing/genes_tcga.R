@@ -159,7 +159,7 @@ library(dplyr)
 
 ##################################
 #### 1) Load in data and meta ####
-analysis <- 'TCGA' # 'TCGA' or 'ccl_aggregate'
+analysis <- 'ccl_aggregate' # 'TCGA' or 'ccl_aggregate'
 PDIR <- file.path('/mnt/work1/users/pughlab/projects/cancer_cell_lines', analysis)
 fl_id <- switch(analysis,
                 ccl_aggregate='all_cna_hg19.seg',
@@ -259,11 +259,23 @@ if(analysis=='TCGA'){
     mg[,match(genes_TCGA, colnames(mg))]
   })
 }
+
 saveRDS(modal_genes2, file=file.path(PDIR, "output", "gene_matrix", "modal_genes2.rds"))
 #modal_genes2 <- readRDS(file.path(PDIR, "output", "gene_matrix", "modal_genes2.rds"))
 
-lapply(names(modal_genes2), function(data_type){
-  write.csv(modal_genes2[[data_type]], 
+## Annotate Normals
+if(analysis == 'TCGA'){
+  modal_genes <- lapply(modal_genes2, function(i){
+    i[grep("^HG[0-9]*$", rownames(i)), 'cancer_type'] <- 'Normal'
+    as.data.frame(i)
+  })
+} else {
+  modal_genes <- modal_genes2
+}
+
+
+lapply(names(modal_genes), function(data_type){
+  write.csv(modal_genes[[data_type]], 
             file=file.path(PDIR, "output", "gene_matrix", paste0(data_type, "_matrix.csv")),
             quote = FALSE, row.names = TRUE, col.names = TRUE)
 })
