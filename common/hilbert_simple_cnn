@@ -177,6 +177,8 @@ def plot_class_cm(cm, outfile,metric ='f1'):
     plt.subplots_adjust(bottom=0.2, top=0.8)
     plt.xticks(class_id, rotation=90)
     plt.savefig(outfile)
+    
+    return class_df
 
 def get_F1score(cm):
     precision = cm.diagonal() / cm.sum(axis=0)
@@ -241,6 +243,7 @@ from tensorflow.keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2
 
 os.chdir("/cluster/home/quever/git/cnvML")
 from pyimagesearch.gradcam import GradCAM
+from occlusioncnn.occlusion import Occlusion
 
 # VARIABLES
 PDIR='/cluster/projects/pughlab/projects/cancer_cell_lines'
@@ -278,8 +281,10 @@ x_train,x_test,y_train,y_test=train_test_split(X,y,test_size=0.2, random_state=1
 
 
 # One-hot encoding of y
-y_train_one_hot = tensorflow.keras.utils.to_categorical(y_train, y.max()+1)
-y_test_one_hot = tensorflow.keras.utils.to_categorical(y_test, y.max()+1)
+y_train_one_hot = tensorflow.keras.utils.to_categorical(y_train,
+    num_classes=len(CATEGORIES))
+y_test_one_hot = tensorflow.keras.utils.to_categorical(y_test,
+    num_classes=len(CATEGORIES))
 
 # Format
 x_train = x_train.astype('float32')
@@ -316,8 +321,11 @@ cm = plot_confusion_matrix(M, x_test, y_test_class, range(0, len(CATEGORIES)),
                            os.path.join(OUTDIR, model_type, "cnn_confusion-matrix.png"))
 plt.close("all")
 
-plot_class_cm(cm, os.path.join(OUTDIR, model_type, "cnn_cm_barplot.png"))
+f1 = plot_class_cm(cm, os.path.join(OUTDIR, model_type, "cnn_cm_barplot.png"))
 plt.close("all")
+np.savetxt(os.path.join(OUTDIR, model_type, 'F1_test.csv'),
+    f1, fmt='%5.2f', delimiter=",", header='ID,Frac,Cnt,Total')
+np.nanmean(f1.Frac) #model2: 0.749264630372789
 
 ################################
 # Average Class-Activation Map #
@@ -341,6 +349,7 @@ for ctype in list(range(y.min(), y.max()+1)):
     image = image / 255
     
     cam = GradCAM(M, ctype)
+    cams, heatmap = cam.compute_heatmap_raw(image)
     heatmap = cam.compute_heatmap(image)
     heatmap = cv2.resize(heatmap, (IMG_SIZE, IMG_SIZE))
     (heatmap, output) = cam.overlay_heatmap(heatmap, ctype_X, alpha=0.5)
@@ -350,17 +359,18 @@ for ctype in list(range(y.min(), y.max()+1)):
         "CAM_" + str(ctype) + "-" + CATEGORIES[ctype] + ".jpg"), output)
     
     ## Plot occlusion map
-    #occ_array = create_occlusion_dataset(image[0,:].copy(), M, IMG_SIZE, 10)
-    #occ_prob=M.predict_proba(occ_array, verbose=False)
-    #occ_viz=fill_occ_array(occ_prob[:,ctype], IMG_SIZE,10)
-    #heatmap = winsorize_heatmap(occ_viz, IMG_SIZE, winsor_hi=0.99)
+    occ = Occlusion(model=M, img=image[0,:].copy(), IMG_SIZE=IMG_SIZE)
+    occ.create_occlusion_dataset(step=10, mem='high')
+    occ.predict_occlusion()
+    occ.fill_occ_array(ctype=ctype)
+    heatmap_occ = 255 - occ.winsorize_heatmap()
+    heatmap_occ = occ.quantile_match(heatmap_occ, heatmap)
+    (heatmap_occ, output_occ) = occ.overlay_heatmap(heatmap_occ, ctype_X, colormap=cv2.COLORMAP_INFERNO)
     
-    #(heatmap, overlap) = overlay_heatmap(heatmap, ctype_X,
-    #    alpha=0.5, colormap=cv2.COLORMAP_INFERNO)
-    #output = np.vstack([ctype_X, heatmap, overlap])
-    #output = imutils.resize(output, height=700)
-    #cv2.imwrite(os.path.join(PDIR, "TCGA", "ctype_avgs",
-    #    "OCC_" + str(ctype) + "-" + CATEGORIES[ctype] + ".jpg"), output)
+    output_occ = np.vstack([ctype_X, heatmap_occ, output_occ])
+    output_occ = imutils.resize(output_occ, height=700)
+    cv2.imwrite(os.path.join(PDIR, "TCGA", "ctype_avgs",
+        "OCC_" + str(ctype) + "-" + CATEGORIES[ctype] + ".jpg"), output_occ)
 
 
 
@@ -399,73 +409,6 @@ plt.savefig(os.path.join(OUTDIR, model_type, "occlusion_p2.png"))
 plt.close("all")
 
 
-#####################################
-# Expand model to cancer cell lines #
-#####################################
-## Read in CCL data
-CCLDIR=Path(os.path.join(PDIR, 'CCL'))
-CCL_DATADIR=os.path.join(CCLDIR, "data")
-CCL_OUTDIR=os.path.join(CCLDIR, "models")
-
-alldata_X=np.empty([0,IMG_SIZE,IMG_SIZE,3])
-alldata_y=[]
-
-for dataset in ['CCLE', 'GNE', 'GDSC']:
-    ccl_pickle_X = open(os.path.join(CCL_DATADIR, dataset, "X.pickle"), "rb")
-    ccl_pickle_y = open(os.path.join(CCL_DATADIR, dataset, "y.pickle"), "rb")
-    ccl_X = pickle.load(ccl_pickle_X)
-    ccl_y = pickle.load(ccl_pickle_y)
-    
-    ccl_CAT=[]
-    for o in os.listdir(os.path.join(CCL_DATADIR, dataset)):
-        if os.path.isdir(os.path.join(CCL_DATADIR, dataset, o)):
-            ccl_CAT.append(o)
-    
-    ccl_y_verbose = [ccl_CAT[int(i)] for i in ccl_y]
-    ccl_tcga_ov = [elem in CATEGORIES for elem in ccl_y_verbose]
-    np.unique(ccl_tcga_ov, return_counts=True) # (array([False,  True]), array([544, 401]))
-    
-    # Format
-    ccl_X = ccl_X.astype('float32')
-    ccl_X = ccl_X / 255
-    
-    ccl_XT = ccl_X[ccl_tcga_ov,:]
-    ccl_yT = list(compress(ccl_y_verbose, ccl_tcga_ov))
-    
-    ## Do prediction testing
-    ccl_yT_class = [ CATEGORIES.index(x) for x in ccl_yT ]
-    ccl_yT_pred = M.predict_classes(ccl_XT, verbose=0)
-    
-    ## Append for ensemble analysis
-    alldata_X = np.concatenate((alldata_X, ccl_XT))
-    alldata_y.extend(ccl_yT_class)
-    
-    ## Test performance on CCL
-    print("Plotting confusion matrix...")
-    if(not os.path.isdir(os.path.join(CCLDIR, "models", model_type, dataset))):
-         os.makedirs(os.path.join(CCLDIR, "models", model_type, dataset))
-    ccl_cm = plot_confusion_matrix(M, ccl_XT, ccl_yT_class, range(0, len(CATEGORIES)),
-                                os.path.join(CCLDIR, "models",
-                                model_type, dataset, "CCLlr_confusion-matrix.png"))
-    plt.close("all")
-    
-    plot_class_cm(ccl_cm, os.path.join(CCLDIR, "models", model_type,
-        dataset, "CCL_cm_barplot.png"))
-
-
-print("Plotting confusion matrix...")
-if(not os.path.isdir(os.path.join(CCLDIR, "models", model_type, 'all'))):
-    os.makedirs(os.path.join(CCLDIR, "models", model_type, 'all'))
-
-ccl_cm = plot_confusion_matrix(M, alldata_X, alldata_y, range(0, len(CATEGORIES)),
-                            os.path.join(CCLDIR, "models",
-                            model_type, 'all', "CCLlr_confusion-matrix.png"))
-plt.close("all")
-
-plot_class_cm(ccl_cm, os.path.join(CCLDIR, "models", model_type,
-    'all', "CCL_cm_barplot.png"))
-plt.close("all")
-
 ############################
 # Transfer learning to CCL #
 ############################
@@ -494,23 +437,29 @@ ccl_XT = ccl_XT / 255
 ccl_yT = list(compress(ccl_y_verbose, ccl_tcga_ov))
 ccl_yT_class = [ CATEGORIES.index(x) for x in ccl_yT ]
 #ccl_XT,ccl_yT_class = balanceGrp(ccl_XT, np.c_[ccl_yT_class], q=0.5)
-y_ccl_one_hot = tensorflow.keras.utils.to_categorical(ccl_yT_class, y.max()+1)
+y_ccl_one_hot = tensorflow.keras.utils.to_categorical(ccl_yT_class,
+    num_classes=len(CATEGORIES))
 
-Mcnn = CNN(model=M, fine_tune_at=10)
-Mcnn.transfer()
-hist_ccl = Mcnn.model.fit(ccl_XT, y_ccl_one_hot, batch_size=32, epochs=5, validation_split=0.2)
+
+## Make new models
+Mtransfer = CNN(model=M, fine_tune_at=2)
+Mtransfer.transfer()
+hist_Tccl = Mtransfer.model.fit(ccl_XT, y_ccl_one_hot, batch_size=32, epochs=10, validation_split=0.2)
 
 Mnaive=CNN(y, width=IMG_SIZE, height=IMG_SIZE, channel=3)
 Mnaive.model_two()
-hist_Nccl = Mnaive.model.fit(ccl_XT, y_ccl_one_hot, batch_size=32, epochs=5, validation_split=0.2)
+hist_Nccl = Mnaive.model.fit(ccl_XT, y_ccl_one_hot, batch_size=32, epochs=10, validation_split=0.2)
 
-for tl in ['transfer', 'naive']:
+for tl in ['transfer', 'naive', 'raw']:
     if tl == 'transfer':
-        M = Mcnn.model
+        M = Mtransfer.model
+        CAT = CATEGORIES
+    elif tl == 'raw':
+        M = load_model(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2.h5'))
+        CAT = CATEGORIES
     else:
         M = Mnaive.model
-    alldata_X=np.empty([0,IMG_SIZE,IMG_SIZE,3])
-    alldata_y=[]
+        CAT = CATEGORIES
     
     for dataset in ['CCLE', 'GNE', 'GDSC']:
         ccl_pickle_X = open(os.path.join(CCL_DATADIR, dataset, "X.pickle"), "rb")
@@ -538,10 +487,6 @@ for tl in ['transfer', 'naive']:
         ccl_yT_class = [ CATEGORIES.index(x) for x in ccl_yT ]
         ccl_yT_pred = M.predict_classes(ccl_XT, verbose=0)
         
-        ## Append for ensemble analysis
-        alldata_X = np.concatenate((alldata_X, ccl_XT))
-        alldata_y.extend(ccl_yT_class)
-        
         ## Test performance on CCL
         print("Plotting confusion matrix...")
         if(not os.path.isdir(os.path.join(CCLDIR, "models", model_type, dataset))):
@@ -551,5 +496,8 @@ for tl in ['transfer', 'naive']:
                                     model_type, dataset, tl  + "_CCLlr_confusion-matrix.png"))
         plt.close("all")
         
-        plot_class_cm(ccl_cm, os.path.join(CCLDIR, "models", model_type,
+        f1 = plot_class_cm(ccl_cm, os.path.join(CCLDIR, "models", model_type,
             dataset, tl  + "_CCL_cm_barplot.png"))
+        plt.close("all")
+        np.savetxt(os.path.join(CCLDIR, 'models', model_type, dataset, tl  + '_F1_test.csv'),
+            f1, fmt='%5.2f', delimiter=",", header='ID,Frac,Cnt,Total')
