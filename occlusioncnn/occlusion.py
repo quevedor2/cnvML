@@ -77,6 +77,8 @@ class Occlusion:
         return(heatmap[:,:,0])
     
     def quantile_match(self, hmap1, hmap2):
+        c1= hmap1.flatten()
+        c2= hmap2.flatten()
         percentiles = np.argsort(np.argsort(c1)) * 100. / (len(c1) - 1)
         c0 = np.quantile(hmap2, np.round(percentiles/100, 2))
         hmap0 = c0.reshape((IMG_SIZE, IMG_SIZE))
