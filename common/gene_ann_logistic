@@ -113,11 +113,14 @@ def get_F1score(cm):
 # MultiClass Classification #
 #############################
 class MulticlassModels:
-    def __init__(self, X=0, y=0, model=0, fine_tune_at=0):
+    def __init__(self, X=0, y=0, model=0, fine_tune_at=0,
+                 lr=0.0001, y_class='multi'):
         self.X = X
         self.y = y
         self.model=model
         self.fine_tune_at=fine_tune_at
+        self.lr=lr
+        self.y_class=y_class
     
     def sr_model(self):
         print("Softmax-regression model")
@@ -140,14 +143,41 @@ class MulticlassModels:
         deep_model.add(Dense(int(hidden_n), input_shape=(X.shape[1],), activation='relu'))
         deep_model.add(Dropout(rate=0.20))
         deep_model.add(Dense(transfer_n, activation='relu', name='transfer_1'))
-        deep_model.add(Dense(y.shape[1], activation='softmax'))
         
-        deep_model.compile(loss='categorical_crossentropy',
-                           optimizer='adam',
-                           metrics=['accuracy'])
+        
+        if self.y_class == 'multi':
+            deep_model.add(Dense(self.y.shape[1], activation='softmax'))
+            deep_model.compile(loss='categorical_crossentropy',
+                          optimizer=Adam(learning_rate=self.lr),
+                          metrics=['accuracy'])
+        elif self.y_class == 'binary':
+            deep_model.add(Dense(units=1, activation='sigmoid', name='out'))
+            deep_model.compile(loss='binary_crossentropy',
+                          optimizer=Adam(learning_rate=self.lr),
+                          metrics=['accuracy'])
+        elif self.y_class == 'regression':
+            deep_model.add(Dense(units=1, name='out'))
+            deep_model.compile(loss='mean_squared_error',
+                          optimizer=Adam(learning_rate=self.lr))
+        else:
+            print("y_class must be either 'regression' or 'multi' or 'binary'")
+        
         self.model=deep_model
     
     def transfer(self):
+        
+        regression_model = Sequential()
+        for layer in self.model.layers[:-1]: # just exclude last layer from copying
+            regression_model.add(layer)
+        
+        if self.y_class == 'regression':
+            regression_model.add(Dense(units=1, name='out'))
+        elif self.y_class == 'multi':
+            regression_model.add(Dense(self.y.shape[1], activation='softmax'))
+        elif self.y_class == 'multi':
+            regression_model.add(Dense(units=1, activation='sigmoid', name='out'))
+        self.model = regression_model
+        
         print("Transfer learning at layer " + str(self.fine_tune_at))
         # Freeze all layers
         self.model.trainable = True
@@ -155,10 +185,21 @@ class MulticlassModels:
         # Make top layers trainable
         for layer in self.model.layers[:self.fine_tune_at]:
           layer.trainable =  False
-        self.model.compile(optimizer='adam',
-                           loss='categorical_crossentropy',
-                           metrics=['accuracy'])
-
+        
+        if self.y_class == 'multi':
+            #model.add(Dense(units=self.y.max()+1, activation='softmax', name='out'))
+            self.model.compile(loss='categorical_crossentropy',
+                          optimizer=Adam(learning_rate=self.lr),
+                          metrics=['accuracy'])
+        elif self.y_class == 'binary':
+            self.model.compile(loss='binary_crossentropy',
+                          optimizer=Adam(learning_rate=self.lr),
+                          metrics=['accuracy'])
+        elif self.y_class == 'regression':
+            self.model.compile(loss='mean_squared_error',
+                          optimizer=Adam(learning_rate=self.lr))
+        else:
+            print("y_class must be either 'regression' or 'classification'")
 
 ###########
 # Modules #
@@ -225,6 +266,8 @@ if not os.path.exists(os.path.join(datadir, 'models', model_type, 'model.h5')):
     
     hist = M.model.fit(X_train, y_train, epochs=25,
         verbose=1, validation_split=0.2)
+    M.model.evaluate(X_test, y_test)[1]
+    plot_loss_accuracy(hist, os.path.join(datadir, 'models', model_type, "cnn_performance.png"))
     M.model.save(os.path.join(datadir, 'models', model_type, 'model.h5'))
     M = M.model
 else:
@@ -262,7 +305,7 @@ f1 = plot_class_cm(cm, os.path.join(datadir, "models",
 plt.close("all")
 np.savetxt(os.path.join(datadir, 'models', model_type, 'F1_test.csv'),
     f1, fmt='%5.2f', delimiter=",", header='ID,Frac,Cnt,Total')
-np.nanmean(f1.Frac) # 0.6789655172413792 lr: 0.7117241379310344
+np.nanmean(f1.Frac) # ann: 0.7917241379310345 lr: 0.7327586206896551
 
 
 ############################
@@ -275,6 +318,7 @@ CCL_OUTDIR=os.path.join(CCLDIR, "models")
 
 dataset = 'GDSC'
 ccl_df = pd.read_csv(os.path.join(CCL_DATADIR, dataset, 'Modal_Total_CN_matrix.csv'))
+ccl_Xid = ccl_df[ccl_df.columns[0]]
 ccl_df = ccl_df.drop([ccl_df.columns[0]], axis=1)
 
 ## Feature scaling and organizing X and y
@@ -294,24 +338,29 @@ y_ccl_one_hot = tf.keras.utils.to_categorical(ccl_yT_class,
 y_ccl_one_hot_naive = pd.get_dummies(ccl_yT).values
 
 ## Make new models
-Mtransfer = MulticlassModels(model=M, fine_tune_at=2)
-Mtransfer.transfer()
-hist_Tccl = Mtransfer.model.fit(ccl_XT, y_ccl_one_hot, batch_size=32, epochs=10, validation_split=0.2)
+M = MulticlassModels(model=M, fine_tune_at=2, lr=0.0001)
+M.transfer()
+hist_Tccl = M.model.fit(ccl_XT, y_ccl_one_hot, batch_size=32, epochs=30, validation_split=0.2)
+M.model.save(os.path.join(datadir, 'models', model_type, 'my_tcga_model_layer2-transfer.h5'))
 
-Mnaive=MulticlassModels(ccl_XT, y_ccl_one_hot)
+Mnaive=MulticlassModels(ccl_XT, y_ccl_one_hot, lr=0.00005)
 Mnaive.ann_model()
-hist_Nccl = Mnaive.model.fit(ccl_XT, y_ccl_one_hot, batch_size=32, epochs=10, validation_split=0.2)\
+hist_Nccl = Mnaive.model.fit(ccl_XT, y_ccl_one_hot, batch_size=32, epochs=30, validation_split=0.2)
+Mnaive.model.save(os.path.join(datadir, 'models', model_type, 'my_tcga_model_layer2-naive.h5'))
+
+M = load_model(os.path.join(datadir, 'models', model_type, 'model.h5'))
+M = load_model(os.path.join(datadir, 'models', model_type, 'my_tcga_model_layer2-transfer.h5'))
+Mnaive = load_model(os.path.join(datadir, 'models', model_type, 'my_tcga_model_layer2-naive.h5'))
 
 for tl in ['naive', 'raw', 'transfer']:
     if tl == 'transfer':
-        M = Mtransfer.model
-        CAT = CATEGORIES
+        M = load_model(os.path.join(datadir, 'models', model_type, 'my_tcga_model_layer2-transfer.h5'))
     elif tl == 'raw':
         M = load_model(os.path.join(datadir, 'models', model_type, 'model.h5'))
-        CAT = CATEGORIES
     else:
-        M = Mnaive.model
-        CAT = CATEGORIES
+        M = load_model(os.path.join(datadir, 'models', model_type, 'my_tcga_model_layer2-naive.h5'))
+    
+    CAT = CATEGORIES
     
     for dataset in ['CCLE', 'GNE', 'GDSC']:
         ccl_df = pd.read_csv(os.path.join(CCL_DATADIR, dataset, 'Modal_Total_CN_matrix.csv'))
@@ -325,8 +374,11 @@ for tl in ['naive', 'raw', 'transfer']:
         ccl_tcga_ov = ccl_df['cancer_type'].isin(CAT)
         ccl_tcga_ov.value_counts() #False    410; True     558
         
+        ## Transform and isolate X
         ccl_XT = ccl_X[ccl_tcga_ov,:]
         ccl_XT = ss.transform(ccl_XT) ## Calculate parameters (mu, std) and transforms
+        
+        ## Isolate y
         ccl_yT = ccl_df['cancer_type'][ccl_tcga_ov]
         ccl_yT_class = [ CAT.index(x) for x in ccl_yT ]
         ccl_yT_pred = M.predict_classes(ccl_XT, verbose=0)
@@ -335,7 +387,7 @@ for tl in ['naive', 'raw', 'transfer']:
         print("Plotting confusion matrix...")
         if(not os.path.isdir(os.path.join(CCLDIR, "models", model_type, dataset))):
              os.makedirs(os.path.join(CCLDIR, "models", model_type, dataset))
-        ccl_cm = plot_confusion_matrix(M, ccl_XT, ccl_yT_class, range(np.min(ccl_yT_class), len(CAT)),
+        ccl_cm = plot_confusion_matrix(M, ccl_XT, ccl_yT_class, range(0, len(CAT)),
                                     os.path.join(CCLDIR, "models",
                                     model_type, dataset, tl  + "_CCLlr_confusion-matrix.png"))
         plt.close("all")
@@ -345,3 +397,149 @@ for tl in ['naive', 'raw', 'transfer']:
         plt.close("all")
         np.savetxt(os.path.join(CCLDIR, 'models', model_type, dataset, tl  + '_F1_test.csv'),
             f1, fmt='%5.2f', delimiter=",", header='ID,Frac,Cnt,Total')
+
+
+
+
+###################################
+# Transfer me some of those drugs #
+###################################
+PsetDIR='/cluster/projects/pughlab/projects/cancer_cell_lines/PSets'
+aacs = get_AACs(PsetDIR)
+pharmaco_dict={'CCLE':"CTRPv2", "GDSC":"GDSC2", "GNE":"gCSI"}
+
+## Read in CCL data
+CCLDIR=Path(os.path.join(pdir, ccl_analysis))
+CCL_DATADIR=os.path.join(CCLDIR, "data")
+CCL_OUTDIR=os.path.join(CCLDIR, "models")
+
+dataset = 'CCLE'
+ccl_df = pd.read_csv(os.path.join(CCL_DATADIR, dataset, 'Modal_Total_CN_matrix.csv'))
+ccl_Xid = ccl_df[ccl_df.columns[0]]
+ccl_df = ccl_df.drop([ccl_df.columns[0]], axis=1)
+
+## Feature scaling and organizing X and y
+ccl_X = ccl_df.values[:, :-1].astype("float")
+ccl_X[np.isnan(ccl_X)] = 2
+
+ccl_Xids = getPharmacoIDs(PsetDIR, dataset, ccl_Xid.tolist())
+intersect_Xids = aacs[pharmaco_dict[dataset]].columns.intersection(ccl_Xids)
+y_aacs = aacs[pharmaco_dict[dataset]][intersect_Xids]
+
+# Subset to cell lines with pharmaco data and Format
+dataset_Xids = getPharmacoIDs(PsetDIR, dataset, y_aacs.columns.tolist(), reverse=True)
+dataset_idx =[]
+for num,id in enumerate(dataset_Xids):
+    dataset_idx.append(ccl_Xid.tolist().index(id))
+
+ccl_XT = ccl_X[dataset_idx,:]
+ccl_XT = ss.transform(ccl_XT) ## Calculate parameters (mu, std) and transforms
+
+ccl_y = y_aacs.to_numpy()
+
+drugs = ["Bortezomib", "Crizotinib", "Docetaxel", "Entinostat", "Erlotinib",
+        "Gemcitabine", "Lapatinib", "Paclitaxel", "Pictilisib", "Sirolimus",
+        "Vorinostat"]
+for drug in drugs:
+    print(drug + "...")
+    drug_idx = np.where(y_aacs.index == drug)[0][0] # 295 -  Lapatinib
+    
+    print("Drug: " + y_aacs.index[drug_idx])
+    ccl_y_drugJ = ccl_y[np.newaxis, drug_idx,:].transpose()
+    nan_idx = np.where(np.isnan(ccl_y_drugJ))[0].tolist()
+    ccl_XT_drugJ = np.delete(ccl_XT, nan_idx, axis=0)
+    ccl_y_drugJ = np.delete(ccl_y_drugJ, nan_idx, axis=0)
+    ccl_y_drugJ = ccl_y_drugJ.round(4)
+    
+    max_class=10
+    ccl_y_drugJ = pd.qcut(ccl_y_drugJ[:,0], max_class, labels=range(max_class)).tolist()
+    ccl_y_drugJ = np.array(ccl_y_drugJ)
+    ccl_y_drugJ = ccl_y_drugJ.reshape(ccl_y_drugJ.shape[0], -1)
+    ccl_y_drugJ_one_hot = tf.keras.utils.to_categorical(ccl_y_drugJ, num_classes=max_class)
+    
+    transfer_model_path = os.path.join(CCLDIR, 'models', model_type, dataset,
+                    'drugs', drug + '_transfer_multi' + str(max_class) + '.h5')
+    naive_model_path = os.path.join(CCLDIR, 'models', model_type, dataset,
+                    'drugs', drug + '_naive_multi' + str(max_class) + '.h5')
+        
+    if not os.path.exists(transfer_model_path):
+        print("Training transfer model...")
+        M = load_model(os.path.join(datadir, 'models', model_type, 'model.h5'))
+        M = MulticlassModels(model=M, y=ccl_y_drugJ_one_hot, fine_tune_at=2,
+                                     lr=0.0001, y_class='multi')
+        M.transfer()
+        hist_Tccl = M.model.fit(ccl_XT_drugJ, ccl_y_drugJ_one_hot,
+                                        batch_size=32, epochs=30, validation_split=0.2)
+        M.model.save(transfer_model_path)
+    
+    if not os.path.exists(naive_model_path):
+        print("Training naive model...")
+        Mnaive=MulticlassModels(X=ccl_XT_drugJ, y=ccl_y_drugJ_one_hot,
+                                lr=0.0001, y_class='multi')
+        Mnaive.ann_model()
+        hist_Nccl = Mnaive.model.fit(ccl_XT_drugJ, ccl_y_drugJ_one_hot, batch_size=32,
+                                    epochs=30, validation_split=0.2)
+        Mnaive.model.save(naive_model_path)
+    
+    
+    for tl in ['naive', 'transfer']:
+        if tl == 'transfer':
+            M = load_model(transfer_model_path)
+        elif tl == 'naive':
+            M = load_model(naive_model_path)
+        else:
+            print("Must be 'naive' or 'transfer'")
+        
+        for dataset_j in ['GDSC', 'GNE']:
+            ccl_df_j = pd.read_csv(os.path.join(CCL_DATADIR, dataset_j, 'Modal_Total_CN_matrix.csv'))
+            ccl_Xid_j = ccl_df_j[ccl_df_j.columns[0]]
+            ccl_df_j = ccl_df_j.drop([ccl_df_j.columns[0]], axis=1)
+            
+            ## Feature scaling and organizing X and y
+            ccl_X_j = ccl_df_j.values[:, :-1].astype("float")
+            ccl_X_j[np.isnan(ccl_X_j)] = 2
+            
+            ccl_Xids_j = getPharmacoIDs(PsetDIR, dataset_j, ccl_Xid_j.tolist())
+            intersect_Xids = aacs[pharmaco_dict[dataset_j]].columns.intersection(ccl_Xids_j)
+            y_aacs_j = aacs[pharmaco_dict[dataset_j]][intersect_Xids]
+            
+            # Subset to cell lines with pharmaco data and Format
+            dataset_Xids_j = getPharmacoIDs(PsetDIR, dataset_j, y_aacs_j.columns.tolist(), reverse=True)
+            dataset_idx =[]
+            for num,id in enumerate(dataset_Xids_j):
+                dataset_idx.append(ccl_Xid_j.tolist().index(id))
+            
+            ccl_XT_j = ccl_X_j[dataset_idx,:]
+            ccl_XT_j = ss.transform(ccl_XT_j) ## Calculate parameters (mu, std) and transforms
+            
+            ccl_y_j = y_aacs_j.to_numpy()
+            drug_idx_j = np.where(y_aacs_j.index == y_aacs.index[drug_idx])[0][0]
+            
+            print("Drug: " + y_aacs_j.index[drug_idx_j])
+            ccl_y_drugJ_j = ccl_y_j[np.newaxis, drug_idx_j,:].transpose()
+            nan_idx = np.where(np.isnan(ccl_y_drugJ_j))[0].tolist()
+            ccl_XT_drugJ_j = np.delete(ccl_XT_j, nan_idx, axis=0)
+            ccl_y_drugJ_j = np.delete(ccl_y_drugJ_j, nan_idx, axis=0)
+            dataset_Xids_j_trim = np.delete(dataset_Xids_j, nan_idx, axis=0)
+            ccl_y_drugJ_j_raw = ccl_y_drugJ_j.round(4)
+            
+            ccl_y_drugJ_j = pd.qcut(ccl_y_drugJ_j_raw[:,0], max_class, labels=range(max_class)).tolist()
+            ccl_y_drugJ_j = np.array(ccl_y_drugJ_j)
+            ccl_y_drugJ_j = ccl_y_drugJ_j.reshape(ccl_y_drugJ_j.shape[0], -1)
+            ccl_y_drugJ_j_one_hot = tf.keras.utils.to_categorical(ccl_y_drugJ_j, num_classes=max_class)
+            
+            y_pred = list(M.predict_classes(ccl_XT_drugJ_j, verbose=0))
+            aac_data = pd.DataFrame({'AAC':list(ccl_y_drugJ_j_raw[:,0]),
+                                     'Pred':y_pred,
+                                     'Actual':list(np.argmax(ccl_y_drugJ_j_one_hot, axis=1))},
+                                     index=list(dataset_Xids_j_trim))
+            aac_data.to_csv(os.path.join(CCLDIR, "models", model_type, dataset_j, 'drugs',
+                                         drug + "_AAC_" + tl + ".csv"), index=True)
+            
+            cm = plot_confusion_matrix(M, ccl_XT_drugJ_j, np.argmax(ccl_y_drugJ_j_one_hot, axis=1),
+                                       range(max_class), os.path.join(CCLDIR, "models",
+                                        model_type, dataset_j, 'drugs',  drug + "_confusion-matrix_" + tl + ".png"))
+            plt.close("all")
+            f1 = plot_class_cm(cm, os.path.join(CCLDIR, "models",
+                               model_type, dataset_j, 'drugs', drug + "_barplot_" + tl + ".png"))
+            plt.close("all")

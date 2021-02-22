@@ -4,13 +4,14 @@ from matplotlib import pyplot as plt
 import cv2
 import random
 import pickle
+import re
 
 ## Reference site:
 
 file_list = []
 class_list = []
 
-analysis = 'CCL' #'TCGA' or 'CCL'
+analysis = 'TCGA' #'TCGA' or 'CCL'
 PDIR='/cluster/projects/pughlab/projects/cancer_cell_lines/' + analysis
 
 if(analysis is 'CCL'):
@@ -45,9 +46,10 @@ for DATADIR in DATADIRS:
 			class_num = CANCER_TYPES.index(category)
 			for img in os.listdir(path):
 				try :
-					img_array = cv2.imread(os.path.join(path, img), cv2.IMREAD_COLOR)
+					img_array = cv2.imread(os.path.join(path, img), cv2.IMREAD_COLOR) # (300,300,3)
 					new_array = cv2.resize(img_array, (IMG_SIZE, IMG_SIZE), interpolation = cv2.INTER_AREA)
-					training_data.append([new_array, class_num])
+					id = re.sub(".png$", "", img)
+					training_data.append([new_array, class_num, id, category])
 				except Exception as e:
 					pass
 	
@@ -62,13 +64,19 @@ for DATADIR in DATADIRS:
 	
 	X = [] #features
 	y = [] #labels
+	Xids = [] #Sample IDs
+	yids = [] #Category IDs (descriptive labels)
 	
-	for features, label in training_data:
+	for features, label, sample, category in training_data:
 		X.append(features)
 		y.append(label)
-		
+		Xids.append(sample)
+		yids.append(category)
+	
 	X = np.array(X).reshape(-1, IMG_SIZE, IMG_SIZE, 3)
 	y = np.array(y).reshape(-1, 1)
+	Xids = np.array(Xids).reshape(-1, 1)
+	yids = np.array(yids).reshape(-1, 1)
 	
 	img = plt.imshow(X[1])
 	plt.savefig(os.path.join(DATADIR, "test.png"))
@@ -81,6 +89,12 @@ for DATADIR in DATADIRS:
 	pickle_out = open(os.path.join(DATADIR, "y.pickle"), "wb")
 	pickle.dump(y, pickle_out)
 	pickle_out.close()
+	
+	Xdf = pd.DataFrame(data=Xids, columns=['samples'])
+	ydf = pd.DataFrame(data=yids, columns=['cancer_type'])
+	Xdf.to_pickle(os.path.join(DATADIR, "Xids.pickle"))
+	ydf.to_pickle(os.path.join(DATADIR, "yids.pickle"))
+
 
 #pickle_in = open("X.pickle", "rb")
 #X = pickle.load(pickle_in)

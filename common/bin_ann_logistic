@@ -113,11 +113,12 @@ def get_F1score(cm):
 # MultiClass Classification #
 #############################
 class MulticlassModels:
-    def __init__(self, X=0, y=0, model=0, fine_tune_at=0):
+    def __init__(self, X=0, y=0, model=0, fine_tune_at=0, lr=0.00001):
         self.X = X
         self.y = y
         self.model=model
         self.fine_tune_at=fine_tune_at
+        self.lr=lr
     
     def sr_model(self):
         print("Softmax-regression model")
@@ -141,7 +142,7 @@ class MulticlassModels:
         deep_model.add(Dense(y.shape[1], activation='softmax'))
         
         deep_model.compile(loss='categorical_crossentropy',
-                           optimizer='adam',
+                           optimizer=Adam(learning_rate=self.lr),
                            metrics=['accuracy'])
         self.model=deep_model
     
@@ -153,7 +154,7 @@ class MulticlassModels:
         # Make top layers trainable
         for layer in self.model.layers[:self.fine_tune_at]:
           layer.trainable =  False
-        self.model.compile(optimizer='adam',
+        self.model.compile(optimizer=Adam(learning_rate=self.lr),
                            loss='categorical_crossentropy',
                            metrics=['accuracy'])
 
@@ -212,7 +213,6 @@ y = tf.keras.utils.to_categorical(y_class, num_classes=len(CATEGORIES))
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2,
     random_state=1234)
-del df
 
 ## setup and fit a multi-class logistic regression model
 if not os.path.exists(os.path.join(datadir, 'models', model_type, 'model.h5')):
@@ -263,7 +263,7 @@ f1 = plot_class_cm(cm, os.path.join(datadir, "models",
 np.savetxt(os.path.join(datadir, 'models', model_type, 'F1_test.csv'),
     f1, fmt='%5.2f', delimiter=",", header='ID,Frac,Cnt,Total')
 plt.close("all")
-np.nanmean(f1.Frac) ## ann: 0.6172413793103446 lr: 0.6893085349795387
+np.nanmean(f1.Frac) ## ann: 0.7931034482758621 lr: 0.6893085349795387
 
 
 ############################
@@ -294,25 +294,25 @@ y_ccl_one_hot = tf.keras.utils.to_categorical(ccl_yT_class,
     num_classes=len(CATEGORIES))
 y_ccl_one_hot_naive = pd.get_dummies(ccl_yT).values
 
-Mtransfer = MulticlassModels(model=M, fine_tune_at=2)
+Mtransfer = MulticlassModels(model=M, fine_tune_at=2, lr=0.0001)
 Mtransfer.transfer()
-hist_Tccl = Mtransfer.model.fit(ccl_XT, y_ccl_one_hot, batch_size=32, epochs=10, validation_split=0.2)
+hist_Tccl = Mtransfer.model.fit(ccl_XT, y_ccl_one_hot, batch_size=32, epochs=20, validation_split=0.2)
+Mtransfer.model.save(os.path.join(datadir, 'models', model_type, 'my_tcga_model_layer2-transfer.h5'))
 
-Mnaive=MulticlassModels(ccl_XT, y_ccl_one_hot)
+Mnaive=MulticlassModels(ccl_XT, y_ccl_one_hot, lr=0.0001)
 Mnaive.ann_model()
-hist_Nccl = Mnaive.model.fit(ccl_XT, y_ccl_one_hot, batch_size=32, epochs=10, validation_split=0.2)
-
+hist_Nccl = Mnaive.model.fit(ccl_XT, y_ccl_one_hot, batch_size=32, epochs=20, validation_split=0.2)
+Mnaive.model.save(os.path.join(datadir, 'models', model_type, 'my_tcga_model_layer2-naive.h5'))
 
 for tl in ['naive', 'raw', 'transfer']:
     if tl == 'transfer':
-        M = Mtransfer.model
-        CAT = CATEGORIES
+        M = load_model(os.path.join(datadir, 'models', model_type, 'my_tcga_model_layer2-transfer.h5'))
     elif tl == 'raw':
         M = load_model(os.path.join(datadir, 'models', model_type, 'model.h5'))
-        CAT = CATEGORIES
     else:
-        M = Mnaive.model
-        CAT = CATEGORIES
+        M = load_model(os.path.join(datadir, 'models', model_type, 'my_tcga_model_layer2-naive.h5'))
+    
+    CAT = CATEGORIES
     
     for dataset in ['CCLE', 'GNE', 'GDSC']:
         ccl_df = pd.read_csv(os.path.join(CCL_DATADIR, dataset, 'Modal_Total_CN_matrix.csv'))
