@@ -136,4 +136,5 @@ for(seg_i in seg_files){
     write.table(l2r_mat, file=file.path(OUTDIR, ds_id, paste0(m, "_matrix.csv")), 
                 sep=",", col.names=TRUE, row.names=TRUE, quote=FALSE)
   }
+  saveRDS(bins_gr, file.path(OUTDIR, "bins_ref.rds"))
 }

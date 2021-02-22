@@ -2,14 +2,19 @@
 #### Functions ####
 preprocessSegs <- function(segd, atype='pancan', 
                            balance=TRUE, quantile_cutoff=0.25,
-                           min_n=FALSE){
+                           min_n=FALSE, hard_cutoff=NULL){
+  segd_by_sample <- split(segd, segd$Sample)
+  ctype_cnts <- table(sapply(segd_by_sample, function(i) unique(i$ctype)))
+  if(!is.null(hard_cutoff)){
+    sample_to <- hard_cutoff
+  } else {
+    sample_to <- quantile(ctype_cnts, quantile_cutoff) ## Number of samples per cancer type
+  }
+  
+  
   if(atype=='pancan'){
-    segd_by_sample <- split(segd, segd$Sample)
-    ctype_cnts <- table(sapply(segd_by_sample, function(i) unique(i$ctype)))
-    
     if(balanced){
       print("Balanced cancer type representation...")
-      sample_to <- quantile(ctype_cnts, quantile_cutoff) ## Number of samples per cancer type
       
       segd_ctype <- split(segd, segd$ctype) ## Find each sample for each ctype
       segd_sample_ctype <- lapply(segd_ctype, function(s){
@@ -57,8 +62,15 @@ preprocessSegs <- function(segd, atype='pancan',
       segd_ctype <- list("PANCAN"=segd)
     }
   } else {
-    print("Separating cancers by cancer type...")
+    print("No balancing, separating cancers by cancer type...")
     segd_ctype <- split(segd, segd$ctype)
+    if(min_n){
+      # Removing samples:
+      rm_idx <- ctype_cnts < (sample_to / 4)
+      rm_ctypes <- names(ctype_cnts)[which(rm_idx)]
+      print(paste0("Removing ", paste(rm_ctypes, collapse=",")))
+      if(any(rm_idx)) segd_ctype <- segd_ctype[-which(names(segd_ctype) %in% rm_ctypes)]
+    }
   }
   return(segd_ctype)
 }
@@ -96,13 +108,14 @@ formatSeg <- function(segd, analysis, PDIR=NULL){
 library(sigminer)
 library(NMF)
 atype <- 'pancan'
+atype <- 'ctype'
 analysis <- 'TCGA'
 balanced=TRUE
 
-
+PDIR <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines'
 if(analysis=='TCGA'){
   seg_files <- "TCGA_mastercalls.abs_segtabs.fixed.txt"
-  META <- file.path(PDIR, 'input/merged_sample_quality_annotations.trimmed.tsv')
+  META <- file.path(PDIR, analysis, 'input/merged_sample_quality_annotations.trimmed.tsv')
   anno <- read.table(META, header=TRUE, check.names = FALSE, 
                      sep="\t", stringsAsFactors = FALSE)
 } else if(analysis=='ccl_aggregate'){
@@ -117,9 +130,8 @@ if(analysis=='TCGA'){
 }
 
 
-PDIR <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines'
-segf <- file.path(PDIR, 'TCGA', "input", "TCGA_mastercalls.abs_segtabs.fixed.txt")
 
+segf <- file.path(PDIR, analysis, "input", seg_files)
 segd <- read.table(segf, sep="\t", header=TRUE, stringsAsFactors = FALSE)
 sample_anno <- data.frame("sample"=unique(segd$Sample))
 sample_anno$ctype <- sapply(sample_anno$sample, function(s){
@@ -174,7 +186,10 @@ save(sig_auto_ctype, file=file.path(PDIR, 'TCGA', "output", "signatures",
 load(file.path(PDIR, 'TCGA', "output", "signatures",
                paste0("cn_tally_ctype_",
                       atype, "-", balanced, ".rda"))) #cn_tally_ctype
+cnt <- 1
 sig_w_ctype <- lapply(cn_tally_ctype, function(cn_tally_W){
+  print(paste0(">> NMF: ", cnt))
+  cnt <<- cnt + 1
   sig_estimate(cn_tally_W$nmf_matrix, range=2:30, cores=2, keep_nmfObj=TRUE, use_random=TRUE,
                nrun = 30, verbose=TRUE, save_plots=TRUE, pConstant = 1e-13,
                plot_basename=file.path(PDIR, 'TCGA', "output", "signatures", "nmf"))
@@ -182,6 +197,13 @@ sig_w_ctype <- lapply(cn_tally_ctype, function(cn_tally_W){
 save(sig_w_ctype, file=file.path(PDIR, 'TCGA', "output", "signatures",
                                  paste0("cn_nmf_ctype_", 
                                         atype, "-", balanced, ".rda")))
+
+for(nm in names(sig_w_ctype)){
+  pdf(file.path(PDIR, 'TCGA', "output", "signatures", "nmf", paste0("ctypes_", nm, ".pdf")), width=12)
+  nmf_dat <- sig_w_ctype[[nm]]$nmfEstimate
+  plot(nmf_dat)
+  dev.off()
+}
 
 #### 5) Visualize CN signatures ####
 sig_method='auto' # 'auto' or 'ctype'
@@ -265,17 +287,12 @@ rownames(sig_mat) <- unlist(sapply(all_fits, function(i) as.character(i$sample))
 save(sig_mat, file=file.path(PDIR, 'TCGA', "output", "signatures", 'tcga-1000g_sigmat.rda'))
 
 #### 7) Assign cancer types ####
-ds <- switch(analysis,
-             TCGA='aliquot_barcode',
-             ccl_aggregate=gsub("_.*", "", seg_i))
-m_idx <- sapply(rownames(l2r_mat), 
-                function(i) grep(paste0("^", i), 
-                                 x=meta[,ds])[1])
-l2r_mat$cancer_type <- gsub(":.*", "", as.character(meta[m_idx,]$`cancer type`))
-l2r_mat$cancer_type[grep("^HG0", rownames(l2r_mat))] <- 'Normal'
+load(file.path(PDIR, 'TCGA', "output", "signatures", 'tcga-1000g_sigmat.rda')) #sig_mat
+ctypes <- s_id[rownames(sig_mat)] # (From Part 1))
+ctypes[grep("^HG0", rownames(sig_mat))] <- 'Normal'
+sig_mat$cancer_type <- ctypes
 
-
-
-write.csv(sig_mat, file=file.path(PDIR, 'TCGA', "output", "signatures", paste0("sig_matrix.csv")),
+write.csv(sig_mat, file=file.path(PDIR, analysis, "output", "signatures", 
+                                  paste0(atype, "_sig_matrix.csv")),
           quote = FALSE, row.names = TRUE, col.names = TRUE)
 

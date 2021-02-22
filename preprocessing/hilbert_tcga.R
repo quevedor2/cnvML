@@ -42,7 +42,8 @@ breaks <- seq(0, 5, by=0.1)
 #col2rgb(colorRampPalette(a_col)(length(breaks)))
 #col2rgb(colorRampPalette(b_col)(length(breaks)))
 
-analysis <- 'ccl_aggregate'
+analysis <- 'ccl_aggregate' # 'TCGA', 'ccl_aggregate'
+annotate <- FALSE
 PDIR <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines'
 if(analysis=='TCGA'){
   seg_files <- "TCGA_mastercalls.abs_segtabs.fixed.txt"
@@ -104,10 +105,12 @@ for(seg_i in seg_files){
       cols <- apply(col2rgb(cols),2,function(x) rgb(x[1]*2, x[2]*2, x[3]*2, maxColorValue = 255))
       
       hc_layer(hc, ir, mean_mode = "absolute", col = cols)
-      hc_polygon(hc, x1=chr.size.dat$cum.start/scale, x2=chr.size.dat$cum.end/scale)
-      hc_text(hc, x1=chr.size.dat$cum.start/scale, x2=chr.size.dat$cum.end/scale, 
-              labels = c(1:22, "X", "Y"), gp = gpar(fontsize = 10), 
-              centered_by = "polygon")
+      if(annotate){
+        hc_polygon(hc, x1=chr.size.dat$cum.start/scale, x2=chr.size.dat$cum.end/scale, col='white')
+        hc_text(hc, x1=chr.size.dat$cum.start/scale, x2=chr.size.dat$cum.end/scale, 
+                labels = c(1:22, "X", "Y"), gp = gpar(fontsize = 10), 
+                centered_by = "polygon")
+      }
       dev.off()
       
     }

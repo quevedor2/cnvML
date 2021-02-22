@@ -6,6 +6,36 @@ this_path <- "~/git/cnsignatures"
 source(paste(this_path,"helper_functions.R",sep="/"))
 source(paste(this_path,"main_functions.R",sep="/"))
 
+###################
+#### Functions ####
+getChrLength <- function(){
+  require(BSgenome.Hsapiens.UCSC.hg19)
+  chr.lengths = seqlengths(Hsapiens)[1:24]
+  chr.len.gr <- makeGRangesFromDataFrame(data.frame("chrom"=names(chr.lengths),
+                                                    "loc.start"=rep(1, length(chr.lengths)),
+                                                    "loc.end"=chr.lengths))
+  chr.len.gr$cum.end <- cumsum(as.numeric(end(chr.len.gr)))
+  chr.len.gr$cum.start <- chr.len.gr$cum.end - (end(chr.len.gr) -1)
+  chr.len.gr$cum.mid <- (chr.len.gr$cum.start + ((chr.len.gr$cum.end - chr.len.gr$cum.start)/2))
+  return(chr.len.gr)
+}
+
+addCumPos <- function(dat, ref, dat.type){
+  m.row.idx <- match(as.character(dat$chrom), as.character(seqnames(ref)))
+  if(dat.type=='data'){
+    dat$cpos <- ref[m.row.idx,]$cum.start +  dat$pos - 1
+    dat$chr.stat
+  } else if(dat.type == 'seg'){
+    dat$cloc.start <- ref[m.row.idx,]$cum.start +  dat$loc.start - 1
+    dat$cloc.end <- ref[m.row.idx,]$cum.start +  dat$loc.end - 1
+  }
+  dat$chr.stat <- (m.row.idx %% 2) + 1
+  return(dat)
+}
+
+##############
+#### Main ####
+
 # setwd(file.path(this_path, "manuscript_Rmarkdown"))
 # eset.dir <- '/mnt/work1/users/bhklab/Projects/cell_line_clonality/total_cel_list/datasets/seg_files/esets'
 # handle <- 'gCSI'
@@ -20,12 +50,8 @@ colnames(segd)[2:4] <- c('chrom', 'loc.start', 'loc.end')
 
 chr.size.dat <- getChrLength()
 seqlevelsStyle(chr.size.dat) <- 'NCBI'
-scale <- 1e5
-
-
-
-
-order=7
+scale <- 1e4
+order=8
 
 
 
@@ -88,10 +114,12 @@ comp.mat <- generateSampleByComponentMatrix(CN_features, CN_components,
                                             cores=1, subcores=num_cores)
 save(comp.mat, file=file.path(PDIR, "output", "newfit", "sample_comp_mat.rda"))
 
+pdf(file.path(PDIR, "output", "newfit", "heatmap_tcga.pdf"))
 NMF::aheatmap(comp.mat,
               fontsize = 7, Rowv=FALSE, Colv=FALSE,
               legend = T, breaks=c(seq(0,199,2),500), 
               main="Component x Sample matrix")
+dev.off()
 
 
 nsig<-7
