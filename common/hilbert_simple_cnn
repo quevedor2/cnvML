@@ -1,40 +1,58 @@
+#################
+# Preprocessing #
+#################
+def balanceGrp(X, y, Xids, q=0.5):
+    cnts = np.unique(y, return_counts=True)
+    target_n = int(np.quantile(cnts[1], q))
+    min_n = int(target_n/4)
+    frames = np.zeros((len(cnts[0])*target_n, 1))
+    for ctype in cnts[0]:
+        fill_idx = int(np.argwhere(ctype==cnts[0])) * target_n
+        ctype_idx = np.argwhere(y==ctype)
+        np.random.seed(seed=1234)
+        
+        if ctype_idx.shape[0] < min_n:
+            print(str(ctype) + " [Remove]: " + str(ctype_idx.shape[0])
+                + " < " + str(min_n))
+            sample_idx = np.zeros(target_n) - 1
+        elif ctype_idx.shape[0] < target_n:
+            print(str(ctype) + " [Upsample]: " + str(ctype_idx.shape[0])
+                + " < " + str(target_n))
+            sample_idx = np.random.choice(ctype_idx[:,0],
+                                          size=target_n, replace=True)
+        elif ctype_idx.shape[0] > target_n:
+            print(str(ctype) + " [Downsample]: " + str(ctype_idx.shape[0])
+                + " > " + str(target_n))
+            sample_idx = np.random.choice(a=ctype_idx[:,0], size=target_n,
+                                          replace=False)
+        else:
+            sample_idx = ctype_idx[:,0]
+        frames[fill_idx:fill_idx+target_n,0] = sample_idx
+    
+    
+    frames = frames[frames[:,0] >= 0,:]
+    Xids_bal=np.asarray(Xids)[frames[:,0].astype('int'),:]
+    X_bal=X[frames[:,0].astype('int'),:,:,:]
+    y_bal=y[frames[:,0].astype('int'),:]
+    return X_bal,y_bal,Xids_bal
+
 ##############
 # CNN Models #
 ##############
-
 class CNN:
-    def __init__(self, y, width, height, channel, model=0):
+    def __init__(self, y=0, width=256, height=256, channel=3, model=0,
+        lr=0.01, fine_tune_at=0, l2_loss_lambda=0.1, y_class='multi'):
         self.y=y
         self.width=width
         self.height=height
         self.channel=channel
         self.model=model
         self.img_size=[width, height, channel]
-    
-    def model_one(self):
-        print("CNN model 1")
-        model = Sequential()
-        model.add(Conv2D(filters=32,  kernel_size=(3,3), activation='relu',
-                         padding='same', input_shape=self.img_size))
-        model.add(Conv2D(filters=32, kernel_size=(3,3), activation='relu', padding='same'))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-        model.add(Dropout(rate=0.25))
+        self.lr=lr
+        self.fine_tune_at=fine_tune_at
+        self.l2_loss_lambda=l2_loss_lambda
+        self.y_class=y_class
         
-        model.add(Conv2D(filters=64,  kernel_size=(3,3), activation='relu', padding='same'))
-        model.add(Conv2D(filters=64, kernel_size=(3,3), activation='relu', padding='same'))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-        model.add(Dropout(rate=0.25))
-        model.add(Flatten())
-        
-        model.add(Dense(units=512, activation='relu'))
-        model.add(Dropout(rate=0.20))
-        model.add(Dense(units=self.y.max()+1, activation='softmax'))
-        
-        model.compile(loss='categorical_crossentropy',
-                      optimizer='adam',
-                      metrics=['accuracy'])
-        self.model=model
-    
     def model_two(self):
         print("CNN model 2")
         model = Sequential()
@@ -48,20 +66,97 @@ class CNN:
         model.add(Conv2D(128, (3, 3), activation='relu', padding='same', name='conv_4'))
         model.add(MaxPooling2D((2, 2), name='maxpool_4'))
         model.add(Flatten())
-        model.add(Dropout(0.5))
+        model.add(Dropout(rate=0.25))
+        
+        model.add(Dense(512, activation='relu', name='dense_1'))
+        #model.add(Dropout(rate=0.20))
+        model.add(Dense(units=self.y.max()+1, activation='softmax', name='out'))
+        
+        model.compile(optimizer='adam',
+                      loss='categorical_crossentropy',
+                      metrics=['accuracy'])
+        #optimizer='adam'
+        self.model=model
+    
+    def model_four(self):
+        print("CNN model 4")
+        model = Sequential()
+        model.add(Conv2D(32, (3, 3), activation='relu', padding='same', name='conv_1',
+                         input_shape=self.img_size))
+        model.add(Conv2D(64, (3, 3), activation='relu', padding='same', name='conv_2'))
+        model.add(Conv2D(128, (3, 3), activation='relu', padding='same', name='conv_3'))
+        model.add(Conv2D(128, (3, 3), activation='relu', padding='same', name='conv_4'))
+        model.add(Dropout(rate=0.20))
+        model.add(MaxPooling2D((2, 2), name='maxpool_1'))
+        model.add(Flatten())
         
         model.add(Dense(512, activation='relu', name='dense_1'))
         model.add(Dropout(rate=0.20))
-        model.add(Dense(units=self.y.max()+1, activation='softmax'))
+        model.add(Dense(512, activation='relu', name='transfer_1'))
         
-        model.compile(optimizer='adam',
-                      loss='binary_crossentropy',
-                      metrics=['accuracy'])
+        if self.y_class == 'multi':
+            model.add(Dense(units=self.y.max()+1, activation='softmax', name='out'))
+            model.compile(loss='categorical_crossentropy',
+                          optimizer=Adam(learning_rate=self.lr),
+                          metrics=['accuracy'])
+        elif self.y_class == 'binary':
+            model.add(Dense(units=1, activation='sigmoid', name='out'))
+            model.compile(loss='binary_crossentropy',
+                          optimizer=Adam(learning_rate=self.lr),
+                          metrics=['accuracy'])
+        elif self.y_class == 'regression':
+            model.add(Dense(units=1, name='out'))
+            model.compile(loss='mean_squared_error',
+                          optimizer=Adam(learning_rate=self.lr))
+        else:
+            print("y_class must be either 'regression' or 'multi' or 'binary'")
+        
         self.model=model
+    
+    def transfer(self):
+        print("Transfer learning at layer " + str(self.fine_tune_at))
+        regression_model = Sequential()
+        for layer in self.model.layers[:-1]: # just exclude last layer from copying
+            regression_model.add(layer)
+        
+        if self.y_class == 'regression':
+            regression_model.add(Dense(units=1, name='out'))
+        elif self.y_class == 'multi':
+            regression_model.add(Dense(self.y.max()+1, activation='softmax'))
+        elif self.y_class == 'binary':
+            regression_model.add(Dense(units=1, activation='sigmoid', name='out'))
+        self.model = regression_model
+        
+        # Freeze all layers
+        self.model.trainable = True
+        
+        # Make top layers trainable
+        for layer in self.model.layers[:self.fine_tune_at]:
+          layer.trainable =  False
+        
+        if self.y_class == 'multi':
+            #model.add(Dense(units=self.y.max()+1, activation='softmax', name='out'))
+            self.model.compile(loss='categorical_crossentropy',
+                          optimizer=Adam(learning_rate=self.lr),
+                          metrics=['accuracy'])
+        elif self.y_class == 'binary':
+            self.model.compile(loss='binary_crossentropy',
+                          optimizer=Adam(learning_rate=self.lr),
+                          metrics=['accuracy'])
+        elif self.y_class == 'regression':
+            self.model.compile(loss='mean_squared_error',
+                          optimizer=Adam(learning_rate=self.lr))
+        else:
+            print("y_class must be either 'regression' or 'classification'")
+
 
 #################
 # Visualization #
 #################
+def plotX(X, outfile):
+    plt.imshow(X.reshape(IMG_SIZE, IMG_SIZE,3))
+    plt.savefig(outfile)
+    plt.close("all")
 
 def plot_loss_accuracy(hist, outfile):
     acc = hist.history['accuracy']
@@ -84,15 +179,72 @@ def plot_loss_accuracy(hist, outfile):
     fig.show()
     fig.savefig(outfile)
 
-def plot_confusion_matrix(model, X, y):
-    y_pred = model.predict_classes(X, verbose=0)
+def plot_confusion_matrix(model, X, y, range_y, outfile):
+    y_pred = list(model.predict_classes(X, verbose=0))
+    y = list(y)
     plt.figure(figsize=(8, 6))
-    sns.heatmap(pd.DataFrame(confusion_matrix(y, y_pred)), annot=True, fmt='d', cmap='YlGnBu', alpha=0.8, vmin=0)
     
+    # Ensure that all the classes are represented
+    y.extend(list(range_y))
+    y_pred.extend(list(range_y))
+    cm=confusion_matrix(y, y_pred)
+    np.fill_diagonal(cm, list(cm.diagonal()-1))
+    
+    # Make the heatmaps!!!
+    sns.heatmap(pd.DataFrame(cm), annot=True, fmt='d', cmap='YlGnBu', alpha=0.8, vmin=0)
+    plt.savefig(outfile)
+    return cm
+
+def plot_class_cm(cm, outfile,metric ='f1'):
+    (p, r, f1) = get_F1score(cm)
+    if (metric is 'f1'):
+        class_frac=f1
+    elif (metric is 'p'):
+        class_frac = p
+    else:
+        class_frac = r
+    
+    class_frac=class_frac.round(2)
+    class_id=list(range(0, len(class_frac)))
+    class_df = pd.DataFrame({'ID':class_id, 'Frac':class_frac,
+                            'Cnt':cm.diagonal(), 'Total':cm.sum(0)})
+    
+    #b1=plt.bar("ID", "Total", data=class_df,class_id, class_frac)
+    b2=plt.bar("ID", "Frac", data=class_df)
+    plt.ylim((0,1))
+    #plt.rcParams["figure.figsize"] = [6,2]
+    plt.xlabel("Cancer_Types")
+    plt.ylabel(metric)
+    plt.subplots_adjust(bottom=0.2, top=0.8)
+    plt.xticks(class_id, rotation=90)
+    plt.savefig(outfile)
+    
+    return class_df
+
+def get_F1score(cm):
+    precision = cm.diagonal() / cm.sum(axis=0)
+    recall = cm.diagonal() / cm.sum(axis=1)
+    f1 = 2 * ((precision * recall)/(precision + recall))
+    return (precision, recall, f1)
+
+def increase_brightness(img, value=30):
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    h, s, v = cv2.split(hsv)
+    
+    lim = 255 - value
+    v[v > lim] = 255
+    v[v <= lim] += value
+    
+    final_hsv = cv2.merge((h, s, v))
+    img = cv2.cvtColor(final_hsv, cv2.COLOR_HSV2BGR)
+    return img
+
 #############
 # Load Data #
 #############
-
+import imutils
+import cv2
+import csv
 import pandas as pd
 import os
 from pathlib import Path
@@ -100,35 +252,56 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pickle
 import sys
+import seaborn as sns
+from itertools import compress
 
+from sklearn.metrics import confusion_matrix, classification_report, r2_score
 from sklearn.model_selection import train_test_split
 
 import tensorflow.keras
-from tensorflow.keras.models import Sequential
+from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D
+from tensorflow.keras.optimizers import Adam
 
-# Load data from TCGA Hilberts
+os.chdir("/cluster/home/quever/git/cnvML")
+from pyimagesearch.gradcam import GradCAM
+from occlusioncnn.occlusion import Occlusion
 
-PDIR='/cluster/projects/pughlab/projects/cancer_cell_lines/TCGA'
-DATADIR = os.path.join(PDIR, "data")
-OUTDIR = os.path.join(PDIR, "models")
+# VARIABLES
+PDIR='/cluster/projects/pughlab/projects/cancer_cell_lines'
+DATADIR = os.path.join(PDIR, "TCGA", "data")
+OUTDIR = os.path.join(PDIR, "TCGA", "models")
 IMG_SIZE=300
 model_type=sys.argv[1]
+lr=sys.argv[2]
+CATEGORIES = ["ACC", "BLCA", "BRCA", "CESC", "CHOL", "COAD",
+              "DLBC", "ESCA", "GBM", "HNSC", "KICH", "KIRC",
+              "KIRP", "LAML", "LGG", "LIHC", "LUAD", "LUSC",
+              "MESO", "OV", "PAAD", "PCPG", "PRAD", "READ",
+              "SARC", "SKCM", "STAD", "TGCT", "THCA", "THYM",
+              "UCEC", "UCS", "UVM", "Normal"]
 
+# Load data from TCGA Hilberts
 pickle_X = open(os.path.join(DATADIR, "X.pickle"), "rb")
+pickle_Xids = open(os.path.join(DATADIR, "Xids.pickle"), "rb")
 pickle_y = open(os.path.join(DATADIR, "y.pickle"), "rb")
 X = pickle.load(pickle_X)
+Xids = pickle.load(pickle_Xids)
 y = pickle.load(pickle_y)
+X,y,Xids = balanceGrp(X, y, Xids, q=0.5)
+#plt.imshow(X[2,].reshape(IMG_SIZE, IMG_SIZE,3))
+#plt.savefig(os.path.join(OUTDIR, model_type, "class_25.png"))
+#plt.close("all")
+
 #X = np.array(X).reshape(-1, IMG_SIZE, IMG_SIZE, 3)
 
-x_train,x_test,y_train,y_test=train_test_split(X,y,test_size=0.2)
-
-# Load CIFAR-10 and format data
-#(x_train2, y_train2), (x_test2, y_test2) = cifar10.load_data()
+x_train,x_test,y_train,y_test=train_test_split(X,y,test_size=0.2, random_state=1234)
 
 # One-hot encoding of y
-y_train_one_hot = tensorflow.keras.utils.to_categorical(y_train, y.max()+1)
-y_test_one_hot = tensorflow.keras.utils.to_categorical(y_test, y.max()+1)
+y_train_one_hot = tensorflow.keras.utils.to_categorical(y_train,
+    num_classes=len(CATEGORIES))
+y_test_one_hot = tensorflow.keras.utils.to_categorical(y_test,
+    num_classes=len(CATEGORIES))
 
 # Format
 x_train = x_train.astype('float32')
@@ -139,23 +312,390 @@ x_test = x_test / 255
 ########################
 # Build/Train ConvNet #
 ########################
-
-
-M=CNN(y, width=IMG_SIZE, height=IMG_SIZE, channel=3)
-if model_type=='model1':
-    M.model_one()
-elif model_type=='model2':
-    M.model_two()
+if not os.path.exists(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2.h5')):
+    M=CNN(y, width=IMG_SIZE, height=IMG_SIZE, channel=3)
+    if model_type=='model1':
+        M.model_one()
+    elif model_type=='model2':
+        M.model_two()
+    elif model_type=='model3':
+        M.model_three()
+    elif model_type=='model4':
+        M.model_four()
+    else:
+        print("no model selected")
+        
+    hist = M.model.fit(x_train, y_train_one_hot, batch_size=32, epochs=10, validation_split=0.2)
+    M.model.evaluate(x_test, y_test_one_hot)[1]
+    M.model.save(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2.h5'))
+    plot_loss_accuracy(hist, os.path.join(OUTDIR, model_type, "cnn_performance.png"))
+    M=M.model
 else:
-    print("no model selected")
+    print("Loading existing model...")
+    M = load_model(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2.h5'))
+
+####################
+# Spot-check model #
+####################
+y_test_class = np.argmax(y_test_one_hot, axis=1)
+cm = plot_confusion_matrix(M, x_test, y_test_class, range(0, len(CATEGORIES)),
+                           os.path.join(OUTDIR, model_type, "cnn_confusion-matrix.png"))
+plt.close("all")
+
+f1 = plot_class_cm(cm, os.path.join(OUTDIR, model_type, "cnn_cm_barplot.png"))
+plt.close("all")
+np.savetxt(os.path.join(OUTDIR, model_type, 'F1_test.csv'),
+    f1, fmt='%5.2f', delimiter=",", header='ID,Frac,Cnt,Total')
+np.nanmean(f1.Frac) #model2: 0.749264630372789 ; model3: 0.7793333333333333; model4: 0.7796666666666666
+
+################################
+# Average Class-Activation Map #
+################################
+os.makedirs(os.path.join(PDIR, "TCGA", "ctype_avgs"))
+ind_report=50
+for ctype in list(range(y.min(), y.max()+1)):
+#for ctype in list(range(5, y.max()+1)):
+    print(CATEGORIES[ctype] + "-" + str(ctype))
+    ## Create an average representation of the cancer type
+    ov_idx = y == ctype
+    ctype_X = X[ov_idx[:,0],:]
+    ctype_Xids = Xids[ov_idx[:,0],:]
+    cam = GradCAM(M, ctype)
+    
+    if ind_report > 0:
+        CTYPEDIR = os.path.join(PDIR, "TCGA", "ctypes", CATEGORIES[ctype])
+        os.makedirs(CTYPEDIR) if not(os.path.exists(CTYPEDIR)) else print("exists")
+        ind_report2 = len(ctype_X) if ind_report > len(ctype_X) else ind_report
+        
+        ## Output predictions of the subset
+        ctype_only_x = ctype_X[0:ind_report2,:]
+        ctype_only_x = ctype_only_x.astype('float32')
+        ctype_only_x = ctype_only_x / 255
+        ctype_class_pred = M.predict_classes(ctype_only_x)
+        with open(os.path.join(CTYPEDIR, "CAM_" + str(ctype) + "_pred.csv"), 'w') as f:
+            wrtr = csv.writer(f)
+            wrtr.writerows(zip(ctype_Xids[0:ind_report2,0], ctype_class_pred))
+        
+        ## Generate individual CAM matrices
+        for sample_idx in list(range(0, ind_report2)):
+            print(str(sample_idx) + " - " + ctype_Xids[sample_idx][0] + "...")
+            #ctype_X = ctype_X.astype("uint8")
+            image = np.expand_dims(ctype_X[sample_idx,:], axis=0)
+            image = image.astype('float32')
+            image = image / 255
+            
+            #cams, heatmap = cam.compute_heatmap_raw(image)
+            heatmap = cam.compute_heatmap(image)
+            heatmap = cv2.resize(heatmap, (IMG_SIZE, IMG_SIZE))
+            np.savetxt(os.path.join(CTYPEDIR, "CAM_" + str(ctype) + '_' + ctype_Xids[sample_idx][0] + ".csv"),
+                       heatmap, delimiter=',', fmt='%d')
+    
+    ctype_X = ctype_X.mean(axis=0).astype("uint8")
+    ctype_X_plot = increase_brightness(ctype_X, value=70)
+    ctype_X_plot2 = increase_brightness(ctype_X, value=30)
+    ## Plot the CN plot for an average cancer-type
+    plotX(ctype_X, os.path.join(PDIR, "TCGA", "ctype_avgs",
+        str(ctype) + "_" + CATEGORIES[ctype]))
+    
+    ## Plot the Class-activation map for an average cancer-type
+    ctype_X = ctype_X.astype("uint8")
+    image = np.expand_dims(ctype_X, axis=0)
+    image = image.astype('float32')
+    image = image / 255
+    
+    #cam = GradCAM(M, ctype)
+    cams, heatmap = cam.compute_heatmap_raw(image)
+    heatmap = cam.compute_heatmap(image)
+    heatmap = cv2.resize(heatmap, (IMG_SIZE, IMG_SIZE))
+    (heatmap, output) = cam.overlay_heatmap(heatmap, ctype_X_plot2, alpha=0.5)
+    output = np.vstack([ctype_X_plot, heatmap, output])
+    output = imutils.resize(output, height=700)
+    cv2.imwrite(os.path.join(PDIR, "TCGA", "ctype_avgs",
+        "CAM_" + str(ctype) + "-" + CATEGORIES[ctype] + ".jpg"), output)
+    
+    ## Plot occlusion map
+    occ = Occlusion(model=M, img=image[0,:].copy(), IMG_SIZE=IMG_SIZE)
+    occ.create_occlusion_dataset(step=10, mem='high')
+    occ.predict_occlusion()
+    occ.fill_occ_array(ctype=ctype)
+    heatmap_occ = 255 - occ.winsorize_heatmap()
+    heatmap_occ = occ.quantile_match(heatmap_occ, heatmap)
+    (heatmap_occ, output_occ) = occ.overlay_heatmap(heatmap_occ, ctype_X_plot2, colormap=cv2.COLORMAP_INFERNO)
+    
+    output_occ = np.vstack([ctype_X_plot, heatmap_occ, output_occ])
+    output_occ = imutils.resize(output_occ, height=700)
+    cv2.imwrite(os.path.join(PDIR, "TCGA", "ctype_avgs",
+        "OCC_" + str(ctype) + "-" + CATEGORIES[ctype] + ".jpg"), output_occ)
 
 
-hist = M.model.fit(x_train, y_train_one_hot, batch_size=32, epochs=20, validation_split=0.2)
-M.model.evaluate(x_test, y_test_one_hot)[1]
-M.model.save(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2.h5'))
-plot_loss_accuracy(hist, os.path.join(OUTDIR, model_type, "cnn_performance.png"))
+
+#################
+# Occlusion Map #
+#################
+cl=3
+cl_samples = [i for i, x in enumerate(y_train==cl) if x]
+gt_prob=M.predict_proba(x_train[cl_samples,:], verbose=False)[0,y_train[i]].round(3)
+x2= x_train.mean(axis=0)
+plt.imshow(x2.reshape(IMG_SIZE, IMG_SIZE,3))
+plt.savefig(os.path.join(OUTDIR, model_type, "occlusion_test.png"))
+plt.close("all")
+
+ctype_avg=np.zeros((len(cl_samples), IMG_SIZE, IMG_SIZE, 3))
+arr_ind=0
+for i in cl_samples[0:50]:
+    print(arr_ind)
+    occ_array = create_occlusion_dataset(x_train[i].copy(), 300, 10)
+    occ_prob=M.predict_proba(occ_array, verbose=False)[:,y_train[i]].round(3)
+    occ_viz=fill_occ_array(occ_prob, IMG_SIZE,10)
+    ctype_avg[arr_ind,:,:,:] = (occ_viz - np.median(occ_viz))
+    arr_ind=arr_ind+1
+
+x3 = ctype_avg[0:50].mean(axis=0)
+
+plt.imshow(x3.reshape(IMG_SIZE, IMG_SIZE,3)[:,:,0], cmap='inferno',
+           vmin=np.quantile(x3, 0.05), vmax=np.quantile(x3, 0.95))
+plt.savefig(os.path.join(OUTDIR, model_type, "occlusion_p.png"))
+plt.close("all")
+
+plt.contour(x3.reshape(IMG_SIZE, IMG_SIZE,3)[:,:,0],
+            levels=np.logspace(np.quantile(x3, 0.05), np.quantile(x3, 0.25), np.quantile(x3, 0.5)),
+            colors='black', alpha=1)
+plt.savefig(os.path.join(OUTDIR, model_type, "occlusion_p2.png"))
+plt.close("all")
 
 
-#y_pred_class = M.model.predict_classes(X_test, verbose=0)
-#y_test_class = np.argmax(y_test, axis=1)
-#plot_confusion_matrix(M.model, x_test, y_test_one_hot)
+############################
+# Transfer learning to CCL #
+############################
+CCLDIR=Path(os.path.join(PDIR, 'CCL'))
+CCL_DATADIR=os.path.join(CCLDIR, "data")
+CCL_OUTDIR=os.path.join(CCLDIR, "models")
+dataset = 'GDSC'
+ccl_pickle_X = open(os.path.join(CCL_DATADIR, dataset, "X.pickle"), "rb")
+ccl_pickle_y = open(os.path.join(CCL_DATADIR, dataset, "y.pickle"), "rb")
+ccl_X = pickle.load(ccl_pickle_X)
+ccl_y = pickle.load(ccl_pickle_y)
+
+ccl_CAT=[]
+for o in os.listdir(os.path.join(CCL_DATADIR, dataset)):
+    if os.path.isdir(os.path.join(CCL_DATADIR, dataset, o)):
+        ccl_CAT.append(o)
+
+ccl_y_verbose = [ccl_CAT[int(i)] for i in ccl_y]
+ccl_tcga_ov = [elem in CATEGORIES for elem in ccl_y_verbose]
+
+# Format
+ccl_XT = ccl_X[ccl_tcga_ov,:]
+ccl_XT = ccl_XT.astype('float32')
+ccl_XT = ccl_XT / 255
+
+ccl_yT = list(compress(ccl_y_verbose, ccl_tcga_ov))
+ccl_yT_class = [ CATEGORIES.index(x) for x in ccl_yT ]
+#ccl_XT,ccl_yT_class = balanceGrp(ccl_XT, np.c_[ccl_yT_class], q=0.5)
+y_ccl_one_hot = tensorflow.keras.utils.to_categorical(ccl_yT_class,
+    num_classes=len(CATEGORIES))
+
+
+## Make new models
+#lr=0.001
+M = load_model(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2.h5'))
+Mtransfer = CNN(model=M, fine_tune_at=9, lr=float(lr))
+Mtransfer.transfer()
+hist_Tccl = Mtransfer.model.fit(ccl_XT, y_ccl_one_hot, batch_size=32, epochs=10, validation_split=0.2)
+Mtransfer.model.save(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2-transfer.h5'))
+
+Mnaive=CNN(y, width=IMG_SIZE, height=IMG_SIZE, channel=3, lr=float(lr))
+Mnaive.model_four()
+hist_Nccl = Mnaive.model.fit(ccl_XT, y_ccl_one_hot, batch_size=32, epochs=10, validation_split=0.2)
+Mnaive.model.save(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2-naive.h5'))
+
+Mtransfer = load_model(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2-transfer.h5'))
+Mnaive = load_model(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2-naive.h5'))
+
+for tl in ['transfer', 'naive', 'raw']:
+    if tl == 'transfer':
+        M = load_model(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2-transfer.h5'))
+    elif tl == 'raw':
+        M = load_model(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2.h5'))
+    else:
+        M = load_model(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2-naive.h5'))
+    CAT = CATEGORIES
+    
+    for dataset in ['CCLE', 'GNE', 'GDSC']:
+        ccl_pickle_X = open(os.path.join(CCL_DATADIR, dataset, "X.pickle"), "rb")
+        ccl_pickle_y = open(os.path.join(CCL_DATADIR, dataset, "y.pickle"), "rb")
+        ccl_X = pickle.load(ccl_pickle_X)
+        ccl_y = pickle.load(ccl_pickle_y)
+        
+        ccl_CAT=[]
+        for o in os.listdir(os.path.join(CCL_DATADIR, dataset)):
+            if os.path.isdir(os.path.join(CCL_DATADIR, dataset, o)):
+                ccl_CAT.append(o)
+        
+        ccl_y_verbose = [ccl_CAT[int(i)] for i in ccl_y]
+        ccl_tcga_ov = [elem in CATEGORIES for elem in ccl_y_verbose]
+        np.unique(ccl_tcga_ov, return_counts=True) # (array([False,  True]), array([544, 401]))
+        
+        # Format
+        ccl_X = ccl_X.astype('float32')
+        ccl_X = ccl_X / 255
+        
+        ccl_XT = ccl_X[ccl_tcga_ov,:]
+        ccl_yT = list(compress(ccl_y_verbose, ccl_tcga_ov))
+        
+        ## Do prediction testing
+        ccl_yT_class = [ CATEGORIES.index(x) for x in ccl_yT ]
+        ccl_yT_pred = M.predict_classes(ccl_XT, verbose=0)
+        
+        ## Test performance on CCL
+        print("Plotting confusion matrix...")
+        if(not os.path.isdir(os.path.join(CCLDIR, "models", model_type, dataset))):
+             os.makedirs(os.path.join(CCLDIR, "models", model_type, dataset))
+        ccl_cm = plot_confusion_matrix(M, ccl_XT, ccl_yT_class, range(0, len(CATEGORIES)),
+                                    os.path.join(CCLDIR, "models",
+                                    model_type, dataset, tl  + "_CCLlr_confusion-matrix.png"))
+        plt.close("all")
+        
+        f1 = plot_class_cm(ccl_cm, os.path.join(CCLDIR, "models", model_type,
+            dataset, tl  + "_CCL_cm_barplot.png"))
+        plt.close("all")
+        np.savetxt(os.path.join(CCLDIR, 'models', model_type, dataset, tl  + '_F1_test.csv'),
+            f1, fmt='%5.2f', delimiter=",", header='ID,Frac,Cnt,Total')
+
+###################################
+# Transfer me some of those drugs #
+###################################
+PsetDIR='/cluster/projects/pughlab/projects/cancer_cell_lines/PSets'
+aacs = get_AACs(PsetDIR)
+pharmaco_dict={'CCLE':"CTRPv2", "GDSC":"GDSC2", "GNE":"gCSI"}
+
+CCLDIR=Path(os.path.join(PDIR, 'CCL'))
+CCL_DATADIR=os.path.join(CCLDIR, "data")
+CCL_OUTDIR=os.path.join(CCLDIR, "models")
+dataset = 'CCLE'
+ccl_pickle_X = open(os.path.join(CCL_DATADIR, dataset, "X.pickle"), "rb")
+ccl_pickle_Xid = open(os.path.join(CCL_DATADIR, dataset, "Xids.pickle"), "rb")
+ccl_X = pickle.load(ccl_pickle_X)
+ccl_Xid = pickle.load(ccl_pickle_Xid)
+
+ccl_Xids = getPharmacoIDs(PsetDIR, dataset, ccl_Xid['samples'])
+intersect_Xids = aacs[pharmaco_dict[dataset]].columns.intersection(ccl_Xids)
+y_aacs = aacs[pharmaco_dict[dataset]][intersect_Xids]
+
+# Subset to cell lines with pharmaco data and Format
+dataset_Xids = getPharmacoIDs(PsetDIR, dataset, y_aacs.columns.tolist(), reverse=True)
+dataset_idx =[]
+for num,id in enumerate(dataset_Xids):
+    dataset_idx.append(ccl_Xid['samples'].tolist().index(id))
+
+ccl_XT = ccl_X[dataset_idx,:]
+ccl_XT = ccl_XT.astype('float32')
+ccl_XT = ccl_XT / 255
+
+ccl_y = y_aacs.to_numpy()
+drugs_pass = ["Bortezomib"]
+drug_fail = ["Crizotinib"]
+drugs = ["Docetaxel", "Entinostat", "Erlotinib",
+        "Gemcitabine", "Lapatinib", "Paclitaxel", "Pictilisib", "Sirolimus",
+        "Vorinostat"]
+for drug in drugs:
+    drug_idx = np.where(y_aacs.index == drug)[0][0] # 295 -  Lapatinib
+    
+    print("Drug: " + y_aacs.index[drug_idx])
+    ccl_y_drugJ = ccl_y[np.newaxis, drug_idx,:].transpose()
+    nan_idx = np.where(np.isnan(ccl_y_drugJ))[0].tolist()
+    ccl_XT_drugJ = np.delete(ccl_XT, nan_idx, axis=0)
+    ccl_y_drugJ = np.delete(ccl_y_drugJ, nan_idx, axis=0)
+    ccl_y_drugJ = ccl_y_drugJ.round(4)
+    
+    max_class=10
+    ccl_y_drugJ = pd.qcut(ccl_y_drugJ[:,0], max_class, labels=range(max_class)).tolist()
+    ccl_y_drugJ = np.array(ccl_y_drugJ)
+    ccl_y_drugJ = ccl_y_drugJ.reshape(ccl_y_drugJ.shape[0], -1)
+    ccl_y_drugJ_one_hot = tensorflow.keras.utils.to_categorical(ccl_y_drugJ, num_classes=max_class)
+    #ccl_y_drugJ = ccl_y_drugJ > 0.25
+    transfer_model_path = os.path.join(CCLDIR, 'models',
+        model_type, drug + '_transfer_' + str(max_class) + 'percentile.h5')
+    naive_model_path = os.path.join(CCLDIR, 'models',
+        model_type, drug + '_naive_' + str(max_class) + 'percentile.h5')
+        
+    if not os.path.exists(transfer_model_path):
+        print("Training transfer model...")
+        M = load_model(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2.h5'))
+        Mtransfer = CNN(model=M, y=ccl_y_drugJ, fine_tune_at=9, lr=float(lr), y_class='multi')
+        Mtransfer.transfer()
+        hist_Tccl = Mtransfer.model.fit(ccl_XT_drugJ, ccl_y_drugJ_one_hot, batch_size=32,
+                                        epochs=10, validation_split=0.2)
+        Mtransfer.model.save(transfer_model_path)
+    
+    if not os.path.exists(naive_model_path):
+        print("Training naive model...")
+        Mnaive=CNN(width=IMG_SIZE, height=IMG_SIZE, channel=3, y=ccl_y_drugJ,
+                    lr=float(lr), y_class='multi')
+        Mnaive.model_four()
+        hist_Nccl = Mnaive.model.fit(ccl_XT_drugJ, ccl_y_drugJ_one_hot, batch_size=32,
+                                    epochs=10, validation_split=0.2)
+        Mnaive.model.save(naive_model_path)
+    
+    for tl in ['naive', 'transfer']:
+        if tl == 'transfer':
+            M = load_model(transfer_model_path)
+        elif tl == 'naive':
+            M = load_model(naive_model_path)
+        else:
+            print("Must be 'naive' or 'transfer'")
+        
+        for dataset_j in ['GDSC', 'GNE']:
+            ccl_pickle_X_j = open(os.path.join(CCL_DATADIR, dataset_j, "X.pickle"), "rb")
+            ccl_pickle_Xid_j = open(os.path.join(CCL_DATADIR, dataset_j, "Xids.pickle"), "rb")
+            ccl_X_j = pickle.load(ccl_pickle_X_j)
+            ccl_Xid_j = pickle.load(ccl_pickle_Xid_j)
+            
+            ccl_Xids_j = getPharmacoIDs(PsetDIR, dataset_j, ccl_Xid_j['samples'])
+            intersect_Xids = aacs[pharmaco_dict[dataset_j]].columns.intersection(ccl_Xids_j)
+            y_aacs_j = aacs[pharmaco_dict[dataset_j]][intersect_Xids]
+            
+            # Subset to cell lines with pharmaco data and Format
+            dataset_Xids_j = getPharmacoIDs(PsetDIR, dataset_j, y_aacs_j.columns.tolist(), reverse=True)
+            dataset_idx =[]
+            for num,id in enumerate(dataset_Xids_j):
+                dataset_idx.append(ccl_Xid_j['samples'].tolist().index(id))
+            
+            ccl_XT_j = ccl_X_j[dataset_idx,:]
+            ccl_XT_j = ccl_XT_j.astype('float32')
+            ccl_XT_j = ccl_XT_j / 255
+            
+            ccl_y_j = y_aacs_j.to_numpy()
+            drug_idx_j = np.where(y_aacs_j.index == y_aacs.index[drug_idx])[0][0]
+            
+            print("Drug: " + y_aacs_j.index[drug_idx_j])
+            ccl_y_drugJ_j = ccl_y_j[np.newaxis, drug_idx_j,:].transpose()
+            nan_idx = np.where(np.isnan(ccl_y_drugJ_j))[0].tolist()
+            ccl_XT_drugJ_j = np.delete(ccl_XT_j, nan_idx, axis=0)
+            ccl_y_drugJ_j = np.delete(ccl_y_drugJ_j, nan_idx, axis=0)
+            ccl_y_drugJ_j = ccl_y_drugJ_j.round(4)
+            
+            ccl_y_drugJ_j = pd.qcut(ccl_y_drugJ_j[:,0], max_class, labels=range(max_class)).tolist()
+            ccl_y_drugJ_j = np.array(ccl_y_drugJ_j)
+            ccl_y_drugJ_j = ccl_y_drugJ_j.reshape(ccl_y_drugJ_j.shape[0], -1)
+            ccl_y_drugJ_j_one_hot = tensorflow.keras.utils.to_categorical(ccl_y_drugJ_j, num_classes=max_class)
+            #ccl_y_drugJ_j = ccl_y_drugJ_j > 0.25
+            #ccl_y_drugJ_j = ccl_y_drugJ_j.astype(int)
+            
+            cm = plot_confusion_matrix(M, ccl_XT_drugJ_j, np.argmax(ccl_y_drugJ_j_one_hot, axis=1),
+                                       range(max_class), os.path.join(CCLDIR, "models",
+                                        model_type, dataset_j, 'drugs',  drug + "_confusion-matrix_" + tl + ".png"))
+            plt.close("all")
+            f1 = plot_class_cm(cm, os.path.join(CCLDIR, "models", model_type,
+                                dataset_j, 'drugs', drug + "_barplot_" + tl + ".png"))
+            plt.close("all")
+
+
+y_pred = Mtransfer.predict_classes(ccl_XT_drugJ_j, verbose=0)
+P = ((ccl_y_drugJ_j + y_pred) == 2).astype(int)
+np.sum((ccl_y_drugJ_j == y_pred).astype(int))
+
+# Ensure that all the classes are represented
+y.extend(list(range_y))
+y_pred.extend(list(range_y))
+plt.figure(figsize=(8, 6))

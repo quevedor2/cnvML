@@ -1,0 +1,47 @@
+import os
+import pandas as pd
+
+def get_AACs(PsetDIR):
+	aacs = dict()
+	for data_type in [ 'CTRPv2', 'gCSI', 'GDSC2' ]:
+		aac = pd.read_csv(os.path.join(PsetDIR, data_type + "_aac.csv"))
+		aac = aac.rename(index=aac.iloc[:,0])
+		aac = aac.drop(aac.columns[0], axis=1)
+		aacs[data_type] = aac
+	return(aacs)
+
+def getPharmacoIDs(PsetDIR, dataset, Xid, reverse=False):
+	meta = pd.read_csv(os.path.join(PsetDIR, "meta_df.csv"))
+	if(reverse):
+		meta = meta.rename(index=meta['PharmacoGX_ID'])
+		search_id=dataset
+	else:
+		meta = meta.rename(index=meta[dataset])
+		search_id='PharmacoGX_ID'
+	
+	
+	pharmacoID=[]
+	for cell_line in Xid:
+		#import re
+		#metavals = [str(i) for i in list(meta.index)]
+		#r = re.compile(re.sub("_[^_]*_[^_]*$", "", cell_line))
+		#list(filter(r.match, metavals))
+		if (meta.index == cell_line).any():
+			ret_id = meta.loc[cell_line][search_id]
+			if isinstance(ret_id, pd.Series):
+				if isinstance(ret_id[[0]][0], str):
+					pharmacoID.append(ret_id[[0]][0])
+				else:
+					pharmacoID.append(ret_id[[1]][0])
+			else:
+				pharmacoID.append(ret_id)
+		else:
+			print("Error on sample " + cell_line)
+			pharmacoID.append(np.nan)
+	
+	return(pharmacoID)
+
+PsetDIR='/cluster/projects/pughlab/projects/cancer_cell_lines/PSets'
+aacs = get_AACs(PsetDIR)
+
+ccl_Xids = getPharmacoIDs(PsetDIR, dataset, ccl_Xid.tolist())
