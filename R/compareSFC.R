@@ -8,28 +8,19 @@
 ## script will generate the euclidean distance between regions 
 ## in the 2D representation.
 
+library(assertthat)
 library(RColorBrewer)
 library(HilbertCurve)
 library(HilbertVis)
 library(ComplexHeatmap)     # Visualize distance between bins
 library(intervals)
 library(GenomicRanges)
-library(AneuploidyScore)    # devtools::install_github("quevedor2/aneuploidy_score")
 
 ## 
 # This directory just guides the output, there are no inputs
 # for this script
 PDIR <-'/mnt/work1/users/pughlab/projects/cancer_cell_lines/cnvML/hilbert_modeling'
 setwd(PDIR)
-
-## Load cytoband/chr-arm data
-data("ucsc.hg19.cytoband")  # hg19 cytoband from AneuploidyScore
-
-
-cytoarm <- cytobandToArm(ucsc.hg19.cytoband)
-cytoarm <- do.call(rbind, lapply(cytoarm, function(i){
-  i[order(factor(rownames(i), c('p', 'cen', 'q'))),]
-}))
 
 
 ###################
@@ -44,26 +35,6 @@ getChrLength <- function(){
   chr.len.gr$cum.start <- chr.len.gr$cum.end - (end(chr.len.gr) -1)
   chr.len.gr$cum.mid <- (chr.len.gr$cum.start + ((chr.len.gr$cum.end - chr.len.gr$cum.start)/2))
   return(chr.len.gr)
-}
-
-addCumPos <- function(dat, ref, dat.type){
-  if(class(seg) == 'GRanges'){
-    m.row.idx <- match(as.character(seqnames(dat)), as.character(seqnames(ref)))
-    
-    dat$cloc.start <- ref[m.row.idx,]$cum.start + start(dat) - 1
-    dat$cloc.end <- ref[m.row.idx,]$cum.start + end(dat) - 1
-  } else {
-    m.row.idx <- match(as.character(dat$chrom), as.character(seqnames(ref)))
-    if(dat.type=='data'){
-      dat$cpos <- ref[m.row.idx,]$cum.start +  dat$pos - 1
-      dat$chr.stat
-    } else if(dat.type == 'seg'){
-      dat$cloc.start <- ref[m.row.idx,]$cum.start +  dat$loc.start - 1
-      dat$cloc.end <- ref[m.row.idx,]$cum.start +  dat$loc.end - 1
-    }
-  }
-  dat$chr.stat <- (m.row.idx %% 2) + 1
-  return(dat)
 }
 
 genHC <- function(end, order){
@@ -117,26 +88,28 @@ setupRefHcMatrix <- function(order=8){
   gbin_pos_ord <- gbin_pos_ord[order(gbin_pos_ord$x1, decreasing=FALSE),]
   ## Associate position in matrix (UID) with a genomic position (start, end)
   gbin_pos_ord$uid <- with(gbin_pos_ord, paste(x1, y1, sep="_"))
+  
+  ## Add a filler for the last interval missing from the order dataframe
+  last_start <- tail(gbin_pos$loc.end,1)
+  last_chr <- tail(gbin_pos$end.chr,1)
+  chr_idx <- which(seqnames(chr.size.dat) == last_chr)
+  last_end <- end(chr.size.dat[chr_idx,])
   gbin_pos_ord <- rbind(gbin_pos_ord, 
-                        data.frame('start'='Y:59279092', 'end'='Y:59326329',
-                                   'loc.start'=59279092, 'loc.end'=59326329,
-                                   'start.chr'='Y', 'end.chr'='Y', 
-                                   'x1'=max(gbin_pos_ord$x1)+1, 'y1'=0, 
+                        data.frame('start'=paste0(last_chr, ":", last_start+1),
+                                   'end'=paste0(last_chr, ":", last_end),
+                                   'loc.start'=last_start+1, 'loc.end'=last_end,
+                                   'start.chr'=last_chr, 'end.chr'=last_chr, 
+                                   'x1'=max(gbin_pos_ord$x1), 'y1'=0, 
                                    'x2'=max(gbin_pos_ord$x1)+1, 'y2'=0, 
                                    'gord'=nrow(gbin_pos_ord)+1, 
-                                   'uid'=paste0(max(gbin_pos_ord$x1)+1, '_0')))
+                                   'uid'=paste0(max(gbin_pos_ord$x1), '_0')))
+  
   ## Reform the HC matrix using UIDs instead of mapping information
-  gbin_pos_mat <- matrix(gbin_pos_ord$uid, nrow=max(gbin_pos_ord$y1)+1, ncol=max(gbin_pos_ord$x1)+1)
+  gbin_pos_mat <- matrix(gbin_pos_ord$uid, nrow=max(gbin_pos_ord$y1)+1, 
+                         ncol=max(gbin_pos_ord$x1)+1)
   return(list("hc"=hc,
               "mat"=gbin_pos_mat, 
               "ord"=gbin_pos_ord))
-}
-
-hilbertBinSize <- function(order, scale, chr.size.dat){
-  hil_n <- 4^order
-  scaled_bp_per_n <- (max(chr.size.dat$cum.end)/scale) / hil_n
-  bp_per_n <- scaled_bp_per_n * scale
-  return(bp_per_n)
 }
 
 plotEuclidDist <- function(xdist, frac_df){
@@ -169,32 +142,69 @@ plotEuclidDist <- function(xdist, frac_df){
   })
 }
 
-#############################
-#### Set up HilbertCurve ####
+
+#' @description Maps a space-filling curve to the HilbertCurve object 
+#' @param spc space filling curve [character]
+#' @param hc_ord dataframe object from setupRefHcMatrix(order=ord)$ord
+#' @param order Order to run setupRefHcMatrix if hc_ord not given [integer]
+#' @param uids Order to fill in the space-filling curve to avoid regenerating
+mapSPC <- function(spc='sweep', hc_ord=NULL, order=NULL, uids=NULL){
+  assert_that(is.character(spc), length(spc)==1,
+              msg="space-filling curve me be a single character vector")
+  
+  if(is.null(hc_ord)){
+    ## Run HilbertCurve if no HC object is given
+    assert_that(is.integer(order), msg="integer order must be set for hilbert curve")
+    hc_ord <- setupRefHcMatrix(order=order)$ord
+  }
+  
+  # assert proper input of hc_ord
+  assert_that(is.data.frame(hc_ord), 
+              all(c('gord', "x1", "x2", "y1", "y2") %in% colnames(hc_ord)),
+              msg="'hc_ord' is malformed. You need to rerun setupRefHcMatrix()")
+  maxn <- max(hc_ord$x1)-1
+  
+  # If a mapping is given, ensure its proper format
+  if(!is.null(uids)) assert_that(is.character(uids), 
+                                 length(uids) == (maxn+1)^2, 
+                                 all(grepl("[0-9]*_[0-9]*", uids)),
+                                 msg="'uids' is malformed")
+  
+  if(grepl('^sweep$', spc, ignore.case = T)){
+    bins <- hc_ord
+    bins <- bins[order(bins$gord),]
+    
+    # Create the Sweep order
+    if(is.null(uids)){
+      uids <- apply(expand.grid(c(0:maxn), 
+                                c(0:maxn)), 
+                    1, paste, collapse="_")
+    }
+    bins$uid <- uids 
+    bins$x1 <- as.integer(gsub("_.*", "", uids))
+    bins$y1 <- as.integer(gsub("^.*_", "", uids))
+    bins$x2 <- c(bins$x1[-1], -1)
+    bins$y2 <- c(bins$y1[-1], -1)
+  }
+  
+  return('hc_ord'=bins)
+}
+
+
+################
+####  Main  ####
 #order <- 8
 for(order in c(4,6,8)){
+  #############################
+  #### Set up HilbertCurve ####
   gbin_pos <- setupRefHcMatrix(order=order)
   gbin_pos$ord$chr <- paste0("chr", gsub(":.*", "", gbin_pos$ord$start))
   gbin_pos$ord$loc.start <- as.integer(gsub("^.*:", "", gbin_pos$ord$start))
   gbin_pos$ord$loc.end <- as.integer(gsub("^.*:", "", gbin_pos$ord$end))
   
-  #############################
-  #### Set up Genomic Bins ####
-  # bin_size <- hilbertBinSize(order, scale, chr.size.dat)
-  # chr_sizes <- setNames(end(chr.size.dat), as.character(seqnames(chr.size.dat)))
-  # bins_gr   <- tileGenome(chr_sizes, tilewidth=bin_size, 
-  #                         cut.last.tile.in.chrom=T)
-  #
-  bins <- gbin_pos$ord
-  bins <- bins[order(bins$gord),]
-  uids <- apply(expand.grid(c(0:(max(bins$x1)-1)), 
-                            c(0:(max(bins$x1)-1))), 
-                1, paste, collapse="_")
-  bins$uid <- uids 
-  bins$x1 <- as.integer(gsub("_.*", "", uids))
-  bins$y1 <- as.integer(gsub("^.*_", "", uids))
-  bins$x2 <- c(bins$x1[-1], -1)
-  bins$y2 <- c(bins$y1[-1], -1)
+  ###################################
+  #### Set up Sweep Genomic Bins ####
+  bins <- mapSPC(spc='sweep', hc_ord=gbin_pos$ord)
   
   #########################################################
   #### Visualize difference using HilbertCurve package ####
