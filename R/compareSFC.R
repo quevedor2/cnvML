@@ -25,6 +25,8 @@ setwd(PDIR)
 
 ###################
 #### Functions ####
+#' @description Returns a GRanges object of the hg19 chromosome sizes
+#' as well as their cumulative starts, ends, and midpoints
 getChrLength <- function(){
   require(BSgenome.Hsapiens.UCSC.hg19)
   chr.lengths = seqlengths(Hsapiens)[1:24]
@@ -37,13 +39,26 @@ getChrLength <- function(){
   return(chr.len.gr)
 }
 
+#' @description Wrapper function to run the HilbertCurve() function
+#' using only a set end point and order
+#' @param end Typically, the size of the genome [integer]
+#' @param order Order to generate hilbert curve for [integer]
 genHC <- function(end, order){
+  assert_that(is.integer(end), end > 1, length(end)==1,
+              msg="'end' must be a single integer greater than 1")
+  assert_that(is.integer(order), end > 2, length(end)==1,
+              msg="'order' must be a single integer greater than 2")
+  
   hc = HilbertCurve(1, end, level = order, mode = "pixel", 
                     reference = TRUE, padding=unit(1, "mm"),
                     newpage = FALSE)
   return(hc)
 }
 
+#' @description Wrapper function to run the HilbertCurve() function
+#' but also to parse the returning object into a dataframe that 
+#' maps the coordinates to genomic positions
+#' @param order Order to generate the HilbertCurve object [integer]
 setupRefHcMatrix <- function(order=8){
   chr.size.dat <- getChrLength()
   seqlevelsStyle(chr.size.dat) <- 'NCBI'
@@ -112,7 +127,20 @@ setupRefHcMatrix <- function(order=8){
               "ord"=gbin_pos_ord))
 }
 
+#' @description Plots the euclidean distance matrix corresponding to 
+#' the results from as.matrix(dist(data.frame(x1, y1))). 'frac_df' acts
+#' as a supporting dataframe to label the chromosomes along the x and
+#' y-axes.
+#' @param xdist distance matrix between a two-column dataframe
+#' @param frac_df data frame to plot the chromosomes along the x and y-
+#' axis with a corresponding colour
 plotEuclidDist <- function(xdist, frac_df){
+  assert_that(is.matrix(xdist), ncol(xdist)==ncol(xdist),
+              "'xdist' is not a properly formed square distance matrix")
+  assert_that(is.data.frame(frac_df), ncol(frac_df)==3,
+              all(c('start', 'end', 'col') %in% colnames(frac_df)),
+              "'frac_df' must be a 3-column data frame of 'start', 'end', 'col'")
+  
   ht = Heatmap(xdist, name = "dist", 
                cluster_rows = F, cluster_columns = F, 
                show_row_names = F, show_column_names = F, 
@@ -141,7 +169,6 @@ plotEuclidDist <- function(xdist, frac_df){
     }, xpos=0, ypos=1)
   })
 }
-
 
 #' @description Maps a space-filling curve to the HilbertCurve object 
 #' @param spc space filling curve [character]
@@ -190,10 +217,8 @@ mapSPC <- function(spc='sweep', hc_ord=NULL, order=NULL, uids=NULL){
   return('hc_ord'=bins)
 }
 
-
 ################
 ####  Main  ####
-#order <- 8
 for(order in c(4,6,8)){
   #############################
   #### Set up HilbertCurve ####
