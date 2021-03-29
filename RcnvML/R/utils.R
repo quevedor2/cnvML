@@ -17,3 +17,26 @@ getChrLength <- function(){
   chr.len.gr$cum.mid <- (chr.len.gr$cum.start + ((chr.len.gr$cum.end - chr.len.gr$cum.start)/2))
   return(chr.len.gr)
 }
+
+
+#' Add an apha layer to the matrix
+#'
+#' @param matX A matrix of RGB colours ranging in value from 0 to 255
+#' @param col Colour to add to the matrix
+#' @param alpha Alpha value of the coloure
+#' @importFrom abind abind
+#' @export
+alphaIt <- function(matX, col, alpha=0.5){
+  #x <- abs(1-(matX/255))
+  x <- (matX/255)
+  
+  col_ramp <- colorRampPalette(colors = c("white", col))(255)
+  feat_cols <- col_ramp[matX+1]
+  feat_rgb <- col2rgb(feat_cols)
+  
+  x2 <- abind(matrix(feat_rgb[1,]/255, ncol=ncol(matX)), 
+              matrix(feat_rgb[2,]/255, ncol=ncol(matX)), 
+              matrix(feat_rgb[3,]/255, ncol=ncol(matX)), 
+              x/(1/alpha), along=3 )
+  return(x2)
+}

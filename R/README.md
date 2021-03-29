@@ -1,4 +1,10 @@
 # R code for cnvML
+## Overview
+
+| Code | Figure | Description |
+|------|------|------|
+| compareSFC.R | Fig S1 | Sweep vs Hilbert SFC |
+
 ## Pre-processing
 
 ## Main Figures
