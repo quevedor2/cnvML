@@ -15,7 +15,7 @@ suppressPackageStartupMessages(library(optparse))
 option_list <- list( 
   make_option(c("-c", "--cntype"), type="character", default='ASCN',
               help="Copy number to plot: TCN or ASCN [default]"),
-  make_option(c("-d", "--dir"), type="character", 
+  make_option(c("-p", "--pdir"), type="character", 
               default='/mnt/work1/users/pughlab/projects/cancer_cell_lines',
               help="Path to seg files [dir]/[dataset]/input/[seg_file] [default]"),
   make_option(c("-o", "--order"), type="integer", default=8,
@@ -29,11 +29,12 @@ option_list <- list(
   make_option(c("-v", "--verbose"), action="store_false", default=FALSE,
               help="Print extra output [default]")
 )
-opt <- parse_args(OptionParser(option_list=option_list))
+opt <- parse_args(OptionParser(option_list=option_list,
+                               add_help_option=True))
 
 
 # Set up parameters
-PDIR <- opt$dir                   # Path to seg files [file.path(PDIR, analysis, input, seg_i)]
+PDIR <- opt$pdir                   # Path to seg files [file.path(PDIR, analysis, input, seg_i)]
 analysis <- opt$dataset           # dataset to analyze (TCGA or ccl_aggregate)
 chr.size.dat <- getChrLength()    # hg19 chromosome sizes
 seqlevelsStyle(chr.size.dat) <- 'NCBI'  # Chr labelling style
