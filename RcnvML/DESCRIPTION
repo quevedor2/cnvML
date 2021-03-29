@@ -21,7 +21,12 @@ Imports:
     GenomeInfoDb,
     BSgenome.Hsapiens.UCSC.hg19,
     ComplexHeatmap,
-    grid
+    grid,
+    abind,
+    grDevices,
+    methods,
+    BiocGenerics,
+    S4Vectors
 Suggests:
     knitr
 RoxygenNote: 7.0.0

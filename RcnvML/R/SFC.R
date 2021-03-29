@@ -15,7 +15,7 @@
 #' @importFrom grid unit
 #' 
 genHC <- function(end, order){
-  assert_that(is.integer(end), end > 1, length(end)==1,
+  assert_that(is.numeric(end), end > 1, length(end)==1,
               msg="'end' must be a single integer greater than 1")
   assert_that(is.integer(order), end > 2, length(end)==1,
               msg="'order' must be a single integer greater than 2")
@@ -32,6 +32,7 @@ genHC <- function(end, order){
 #' but also to parse the returning object into a dataframe that 
 #' maps the coordinates to genomic positions
 #' @param order Order to generate the HilbertCurve object [integer]
+#' @param scale divide the end by a given scale to adjust [integer]
 #' @return
 #'  A list object with 3 elements:
 #'    - 'hc' = HilbertCurve object
@@ -43,11 +44,12 @@ genHC <- function(end, order){
 #' @importFrom GenomeInfoDb seqlevelsStyle<-
 #' @importFrom intervals interval_overlap
 #' @import GenomicRanges
-setupRefHcMatrix <- function(order=8){
+setupRefHcMatrix <- function(order=8, scale=1){
   chr.size.dat <- getChrLength()
   seqlevelsStyle(chr.size.dat) <- 'NCBI'
   
-  hc <- genHC(max(chr.size.dat$cum.end), order)
+  hc <- genHC(end = as.numeric(max(chr.size.dat$cum.end)/scale), 
+              order = as.integer(order))
   
   ## Identify the intervals for each HC bin by dividing by the zoom factor
   bin_df <- data.frame(start = round(start(hc@BINS) / hc@ZOOM),
@@ -57,7 +59,7 @@ setupRefHcMatrix <- function(order=8){
   ### Create interval objects of bins and chromosomes
   bin_df[,1] <- bin_df[,1]+1
   bin_ir <- Intervals(bin_df)            # bins intervals
-  bin_chrsize <- as.data.frame(mcols(chr.size.dat)[,c('cum.start', 'cum.end')])
+  bin_chrsize <- as.data.frame(mcols(chr.size.dat)[,c('cum.start', 'cum.end')])/scale
   chrsize_ir <- Intervals(bin_chrsize)   # chrs intervals
   
   ### overlap the bin and chrs intervals and flag intervals that span two chrs
@@ -92,7 +94,7 @@ setupRefHcMatrix <- function(order=8){
   last_start <- tail(gbin_pos$loc.end,1)
   last_chr <- tail(gbin_pos$end.chr,1)
   chr_idx <- which(seqnames(chr.size.dat) == last_chr)
-  last_end <- end(chr.size.dat[chr_idx,])
+  last_end <- end(chr.size.dat[chr_idx,])/scale
   gbin_pos_ord <- rbind(gbin_pos_ord, 
                         data.frame('start'=paste0(last_chr, ":", last_start+1),
                                    'end'=paste0(last_chr, ":", last_end),
@@ -138,7 +140,8 @@ mapSPC <- function(spc='sweep', hc_ord=NULL, order=NULL, uids=NULL){
   assert_that(is.data.frame(hc_ord), 
               all(c('gord', "x1", "x2", "y1", "y2") %in% colnames(hc_ord)),
               msg="'hc_ord' is malformed. You need to rerun setupRefHcMatrix()")
-  maxn <- max(hc_ord$x1)-1
+  ords <- 4^(1:20)
+  maxn <- 4^which.min(abs(ords-maxn)) -1
   
   # If a mapping is given, ensure its proper format
   if(!is.null(uids)) assert_that(is.character(uids), 
