@@ -25,6 +25,8 @@ getChrLength <- function(){
 #' @param col Colour to add to the matrix
 #' @param alpha Alpha value of the coloure
 #' @importFrom abind abind
+#' @importFrom grDevices colorRampPalette
+#' @importFrom grDevices col2rgb
 #' @export
 alphaIt <- function(matX, col, alpha=0.5){
   #x <- abs(1-(matX/255))
