@@ -31,6 +31,12 @@ option_list <- list(
 )
 opt <- parse_args(OptionParser(option_list=option_list))
 
+########################
+#### Load Libraries ####
+libraries <- c('HilbertCurve', 'circlize', 'DescTools', 
+               'GenomicRanges', 'dplyr', 'RcnvML', 'assertthat')
+null <- lapply(libraries, function(i) suppressMessages(require(i, character.only = TRUE)))
+# devtools::install_github("quevedor2/cnvML/RcnvML", ref='dev')
 
 # Set up parameters
 PDIR <- opt$pdir                   # Path to seg files [file.path(PDIR, analysis, input, seg_i)]
@@ -46,13 +52,6 @@ add_1000g <- TRUE                 # Adds 1000G data to the TCGA seg file
 sfc <- opt$sfc                    # whether to use a hilbert SFC or sweep
 verbose <- FALSE                  # Verbose, TRUE or FALSE
 cntype <- opt$cntype                # Plot ASCN or TCN as colours
-
-########################
-#### Load Libraries ####
-libraries <- c('HilbertCurve', 'circlize', 'DescTools', 
-               'GenomicRanges', 'dplyr', 'RcnvML', 'assertthat')
-null <- lapply(libraries, function(i) suppressMessages(require(i, character.only = TRUE)))
-# devtools::install_github("quevedor2/cnvML/RcnvML", ref='dev')
 
 # Asserts
 assert_that(length(cntype)==1, any(c('TCN', 'ASCN') %in% cntype), 
