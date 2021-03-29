@@ -4,10 +4,12 @@
 \alias{setupRefHcMatrix}
 \title{Parse the HilbertCurve object}
 \usage{
-setupRefHcMatrix(order = 8)
+setupRefHcMatrix(order = 8, scale = 1)
 }
 \arguments{
 \item{order}{Order to generate the HilbertCurve object [integer]}
+
+\item{scale}{divide the end by a given scale to adjust [integer]}
 }
 \value{
 A list object with 3 elements:

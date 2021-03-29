@@ -25,7 +25,8 @@ Imports:
     abind,
     grDevices,
     methods,
-    BiocGenerics
+    BiocGenerics,
+    S4Vectors
 Suggests:
     knitr
 RoxygenNote: 7.0.0

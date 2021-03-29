@@ -38,6 +38,7 @@ calcCumulativeGPos <- function(gr0, seqstyle='ENSEMBL'){
 #' A GRanges intersected between s_gr and ref_gr with annotations
 #' from ref_gr
 #' @importFrom assertthat assert_that
+#' @importFrom S4Vectors subjectHits
 #' @import GenomicRanges
 #' @export
 intersectAndAnnotate <- function(s_gr, ref_gr, cpos=TRUE){
