@@ -1,3 +1,14 @@
+# Description: Plots the Space-Filling Curve (SFC) for Hilbert or Sweep
+## style plots using an input seg file. 
+#
+# Usage:
+## Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc sweep --dataset ccl_aggregate
+## Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc sweep --dataset TCGA
+## Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc hilbert --dataset ccl_aggregate
+## Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc hilbert --dataset TCGA
+## Rscript plotSFC.R --cntype 'TCN' --order 8 --maxcn 8 --sfc hilbert --dataset ccl_aggregate
+## Rscript plotSFC.R --cntype 'TCN' --order 8 --maxcn 8 --sfc hilbert --dataset TCGA
+
 library(HilbertCurve)
 library(HilbertVis)
 library(circlize)
@@ -120,7 +131,9 @@ for(seg_i in seg_files){
                                 colors = colorRampPalette(b_col)(length(breaks)))
       
       ## Plot Allele specific copy-number
-      png(file.path(PDIR, analysis, "output", "hilbert", paste0(sample_id, ".png")), 
+      dir.create(file.path(PDIR, analysis, "output", sfc, cntype), 
+                 recursive = T, showWarnings = F)
+      png(file.path(PDIR, analysis, "output", sfc, cntype, paste0(sample_id, ".png")), 
           width=300, height=300)
       hc_obj <- setupRefHcMatrix(order = order, scale=scale)
       if(sfc == 'sweep'){
