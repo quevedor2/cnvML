@@ -14,6 +14,7 @@
 #' @importFrom ComplexHeatmap decorate_heatmap_body
 #' @importFrom grid grid.segments
 #' @importFrom grid grid.polygon
+#' @importFrom grid gpar
 #' @export
 #' 
 plotEuclidDist <- function(xdist, frac_df){
