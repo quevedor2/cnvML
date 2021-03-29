@@ -30,7 +30,7 @@ option_list <- list(
               help="Print extra output [default]")
 )
 opt <- parse_args(OptionParser(option_list=option_list,
-                               add_help_option=True))
+                               add_help_option=False))
 
 
 # Set up parameters
