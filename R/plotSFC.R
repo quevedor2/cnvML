@@ -152,7 +152,7 @@ for(seg_i in seg_files){
         assert_that(all(c('Modal_Total_CN') %in% colnames(chr.data)),
                     msg='Could not find both Modal_Total_CN in chr.data')
         cols <- a1(chr.data$Modal_Total_CN)
-      } else (cntype=='ASCN'){
+      } else if (cntype=='ASCN'){
         # Expecting column: Modal_HSCN_1, Modal_HSCN_2
         assert_that(all(c('Modal_HSCN_1', 'Modal_HSCN_2') %in% colnames(chr.data)),
                     msg='Could not find both Modal_HSCN_1/2 in chr.data')
