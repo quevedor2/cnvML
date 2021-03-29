@@ -24,7 +24,8 @@ Imports:
     grid,
     abind,
     grDevices,
-    methods
+    methods,
+    BiocGenerics
 Suggests:
     knitr
 RoxygenNote: 7.0.0

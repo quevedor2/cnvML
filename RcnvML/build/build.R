@@ -24,6 +24,7 @@ usethis::use_package("BSgenome.Hsapiens.UCSC.hg19")
 usethis::use_package("ComplexHeatmap")
 usethis::use_package("grid")
 usethis::use_package("abind")
+usethis::use_package("BiocGenerics")
 usethis::use_package("grDevices")
 
 #### Building ####

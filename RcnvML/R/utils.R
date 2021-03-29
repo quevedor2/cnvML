@@ -42,3 +42,23 @@ alphaIt <- function(matX, col, alpha=0.5){
               x/(1/alpha), along=3 )
   return(x2)
 }
+
+#' Add cumulative genomic position
+#'
+#' @param dat Input data, either a seg dataframe or data
+#' @param ref GRanges object from getChrLength
+#' @param dat.type either 'data' or 'seg'
+#' @importFrom BiocGenerics match
+#' @export
+addCumPos <- function(dat, ref, dat.type){
+  m.row.idx <- match(as.character(dat$chrom), as.character(seqnames(ref)))
+  if(dat.type=='data'){
+    dat$cpos <- ref[m.row.idx,]$cum.start +  dat$pos - 1
+    dat$chr.stat
+  } else if(dat.type == 'seg'){
+    dat$cloc.start <- ref[m.row.idx,]$cum.start +  dat$loc.start - 1
+    dat$cloc.end <- ref[m.row.idx,]$cum.start +  dat$loc.end - 1
+  }
+  dat$chr.stat <- (m.row.idx %% 2) + 1
+  return(dat)
+}
