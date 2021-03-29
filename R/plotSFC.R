@@ -8,11 +8,7 @@
 ## Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc hilbert --dataset TCGA
 ## Rscript plotSFC.R --cntype 'TCN' --order 8 --maxcn 8 --sfc hilbert --dataset ccl_aggregate
 ## Rscript plotSFC.R --cntype 'TCN' --order 8 --maxcn 8 --sfc hilbert --dataset TCGA
-
-libraries <- c('HilbertCurve', 'circlize', 'DescTools', 
-               'GenomicRanges', 'dplyr', 'optparse', 'RcnvML', 'assertthat')
-null <- lapply(libraries, function(i) suppressPackageStartupMessages(require(i, character.only = TRUE)))
-# devtools::install_github("quevedor2/cnvML/RcnvML", ref='dev')
+suppressPackageStartupMessages(library(optparse))
 
 ####################
 #### Parameters ####
@@ -50,6 +46,13 @@ add_1000g <- TRUE                 # Adds 1000G data to the TCGA seg file
 sfc <- opt$sfc                    # whether to use a hilbert SFC or sweep
 verbose <- FALSE                  # Verbose, TRUE or FALSE
 cntype <- opt$cntype                # Plot ASCN or TCN as colours
+
+########################
+#### Load Libraries ####
+libraries <- c('HilbertCurve', 'circlize', 'DescTools', 
+               'GenomicRanges', 'dplyr', 'RcnvML', 'assertthat')
+null <- lapply(libraries, function(i) suppressMessages(require(i, character.only = TRUE)))
+# devtools::install_github("quevedor2/cnvML/RcnvML", ref='dev')
 
 # Asserts
 assert_that(length(cntype)==1, any(c('TCN', 'ASCN') %in% cntype), 
