@@ -9,14 +9,10 @@
 ## Rscript plotSFC.R --cntype 'TCN' --order 8 --maxcn 8 --sfc hilbert --dataset ccl_aggregate
 ## Rscript plotSFC.R --cntype 'TCN' --order 8 --maxcn 8 --sfc hilbert --dataset TCGA
 
-library(HilbertCurve)
-library(HilbertVis)
-library(circlize)
-library(DescTools)
-library(GenomicRanges)
-library(dplyr)
-library(optparse)
-library(RcnvML)   # devtools::install_github("quevedor2/cnvML/RcnvML", ref='dev')
+libraries <- c('HilbertCurve', 'circlize', 'DescTools', 
+               'GenomicRanges', 'dplyr', 'optparse', 'RcnvML', 'assertthat')
+null <- lapply(libraries, function(i) suppressPackageStartupMessages(require(i, character.only = TRUE)))
+# devtools::install_github("quevedor2/cnvML/RcnvML", ref='dev')
 
 ####################
 #### Parameters ####
