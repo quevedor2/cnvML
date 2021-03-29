@@ -22,7 +22,9 @@ Imports:
     BSgenome.Hsapiens.UCSC.hg19,
     ComplexHeatmap,
     grid,
-    abind
+    abind,
+    grDevices,
+    methods
 Suggests:
     knitr
 RoxygenNote: 7.0.0
