@@ -19,7 +19,9 @@ Imports:
     GenomicRanges,
     intervals,
     GenomeInfoDb,
-    BSgenome.Hsapiens.UCSC.hg19
+    BSgenome.Hsapiens.UCSC.hg19,
+    ComplexHeatmap,
+    grid
 Suggests:
     knitr
 RoxygenNote: 7.0.0
