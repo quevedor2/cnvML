@@ -29,8 +29,7 @@ option_list <- list(
   make_option(c("-v", "--verbose"), action="store_false", default=FALSE,
               help="Print extra output [default]")
 )
-opt <- parse_args(OptionParser(option_list=option_list,
-                               add_help_option=False))
+opt <- parse_args(OptionParser(option_list=option_list))
 
 
 # Set up parameters
