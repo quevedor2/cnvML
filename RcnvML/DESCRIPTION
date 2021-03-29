@@ -1,0 +1,28 @@
+Package: RcnvML
+Type: Package
+Title: Assistance functions to support the cnvML project
+Version: 0.1.0
+Author: Rene Quevedo
+Maintainer: Rene Quevedo <quever88@gmail.com>
+Description: This package is designed to be package togeher all the functions
+  used for the cnvML project. 
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Depends:
+    R (>= 2.10.0)
+Imports: 
+    assertthat,
+    utils,
+    stats,
+    HilbertCurve,
+    GenomicRanges,
+    intervals,
+    GenomeInfoDb,
+    BSgenome.Hsapiens.UCSC.hg19,
+    ComplexHeatmap,
+    grid
+Suggests:
+    knitr
+RoxygenNote: 7.0.0
+VignetteBuilder: knitr
