@@ -147,12 +147,12 @@ for(seg_i in seg_files){
       # values when mixing
       chr.data <- addCumPos(seg, chr.size.dat, dat.type='seg')
       ir <- IRanges(chr.data$cloc.start/scale, chr.data$cloc.end/scale)
-      if(cntype='TCN'){
+      if(cntype=='TCN'){
         # Expecting column: Modal_Total_CN
         assert_that(all(c('Modal_Total_CN') %in% colnames(chr.data)),
                     msg='Could not find both Modal_Total_CN in chr.data')
         cols <- a1(chr.data$Modal_Total_CN)
-      } else (cntype='ASCN'){
+      } else (cntype=='ASCN'){
         # Expecting column: Modal_HSCN_1, Modal_HSCN_2
         assert_that(all(c('Modal_HSCN_1', 'Modal_HSCN_2') %in% colnames(chr.data)),
                     msg='Could not find both Modal_HSCN_1/2 in chr.data')
