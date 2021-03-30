@@ -117,7 +117,7 @@ setupRefHcMatrix <- function(order=8, scale=1){
 #' Map a space-filling curve using a HilbertCurve object
 #'
 #' @description Maps a space-filling curve to the HilbertCurve object 
-#' @param spc space filling curve [character]
+#' @param sfc space filling curve [character]
 #' @param hc_ord dataframe object from setupRefHcMatrix(order=ord)$ord
 #' @param order Order to run setupRefHcMatrix if hc_ord not given [integer]
 #' @param uids Order to fill in the space-filling curve to avoid regenerating
@@ -127,8 +127,8 @@ setupRefHcMatrix <- function(order=8, scale=1){
 #' @export
 #' @importFrom assertthat assert_that
 #' 
-mapSPC <- function(spc='sweep', hc_ord=NULL, order=NULL, uids=NULL){
-  assert_that(is.character(spc), length(spc)==1,
+mapSFC <- function(sfc='sweep', hc_ord=NULL, order=NULL, uids=NULL){
+  assert_that(is.character(sfc), length(sfc)==1,
               msg="space-filling curve me be a single character vector")
   
   if(is.null(hc_ord)){
@@ -142,7 +142,7 @@ mapSPC <- function(spc='sweep', hc_ord=NULL, order=NULL, uids=NULL){
               all(c('gord', "x1", "x2", "y1", "y2") %in% colnames(hc_ord)),
               msg="'hc_ord' is malformed. You need to rerun setupRefHcMatrix()")
   ords <- 4^(1:20)
-  maxn <- 4^which.min(abs(ords-maxn)) -1
+  maxn <- 4^which.min(abs(ords-max(hc_ord$x1))) -1
   
   # If a mapping is given, ensure its proper format
   if(!is.null(uids)) assert_that(is.character(uids), 
@@ -150,7 +150,7 @@ mapSPC <- function(spc='sweep', hc_ord=NULL, order=NULL, uids=NULL){
                                  all(grepl("[0-9]*_[0-9]*", uids)),
                                  msg="'uids' is malformed")
   
-  if(grepl('^sweep$', spc, ignore.case = T)){
+  if(grepl('^sweep$', sfc, ignore.case = T)){
     bins <- hc_ord
     bins <- bins[order(bins$gord),]
     

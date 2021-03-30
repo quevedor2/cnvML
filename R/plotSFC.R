@@ -78,6 +78,7 @@ seg_files <- switch(analysis,
 
 ####################
 #### Seg to SFC #### 
+uids <- NULL    # placeholder for SFC mapping
 for(seg_i in seg_files){
   segf <- file.path(PDIR, analysis, "input", seg_i)
   segd <- read.table(segf, sep="\t", header=TRUE, stringsAsFactors = FALSE)
@@ -134,8 +135,9 @@ for(seg_i in seg_files){
       hc_obj <- setupRefHcMatrix(order = order, scale=scale)
       if(sfc == 'sweep'){
         if(verbose) print("Using a Sweep SFC")
-        bins <- mapSPC(spc='sweep', hc_ord=hc_obj$ord)
+        bins <- mapSFC(sfc='sweep', hc_ord=hc_obj$ord, uids=uids)
         hc_obj$hc@POS <- bins[-nrow(bins),c('x1', 'y1', 'x2', 'y2')]
+        uids <- bins$uid
       }
       
       
