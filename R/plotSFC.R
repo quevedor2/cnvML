@@ -14,20 +14,20 @@ suppressPackageStartupMessages(library(optparse))
 #### Parameters ####
 option_list <- list( 
   make_option(c("-c", "--cntype"), type="character", default='ASCN',
-              help="Copy number to plot: TCN or ASCN [default]"),
+              help="Copy number to plot: TCN or ASCN [%default]"),
   make_option(c("-p", "--pdir"), type="character", 
               default='/mnt/work1/users/pughlab/projects/cancer_cell_lines',
-              help="Path to seg files [dir]/[dataset]/input/[seg_file] [default]"),
+              help="Path to seg files [dir]/[dataset]/input/[seg_file] [%default]"),
   make_option(c("-o", "--order"), type="integer", default=8,
-              help="Order for space filling curve (SFC) [default]"),
+              help="Order for space filling curve (SFC) [%default]"),
   make_option(c("-m", "--maxcn"), type="integer", default=5,
-              help="Max CN to plot to [default]"),
+              help="Max CN to plot to [%default]"),
   make_option(c("-s", "--sfc"), type="character", default='hilbert',
-              help="Space-filling curve to use, 'sweep' or 'hilbert' [default]"),
+              help="Space-filling curve to use, 'sweep' or 'hilbert' [%default]"),
   make_option(c("-d", "--dataset"), type="character", default='ccl_aggregate',
-              help="Dataset to use, 'ccl_aggregate' or 'TCGA' [default]"),
+              help="Dataset to use, 'ccl_aggregate' or 'TCGA' [%default]"),
   make_option(c("-v", "--verbose"), action="store_false", default=FALSE,
-              help="Print extra output [default]")
+              help="Print extra output [%default]")
 )
 opt <- parse_args(OptionParser(option_list=option_list))
 
