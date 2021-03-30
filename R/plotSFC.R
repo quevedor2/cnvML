@@ -62,9 +62,7 @@ assert_that(length(analysis)==1, any(c('ccl_aggregate', 'TCGA') %in% analysis),
             msg='--dataset must be either "ccl_aggregate" or "TCGA"')
 assert_that(is.integer(order), length(order)==1, order>3,
             msg='--order must be a single integer greater than 3')
-assert_that(is.integer(order), length(order)==1, order>3,
-            msg='--order must be a single integer greater than 3')
-assert_that(is.integer(opt$maxcn), length(opt$maxcn)==1, opt$maxcn>2,
+assert_that(is.numeric(opt$maxcn), length(opt$maxcn)==1, opt$maxcn>2,
             msg='--maxcn must be a single integer greater than 2')
 
 ###########################

@@ -42,6 +42,7 @@ genHC <- function(end, order){
 #' @export
 #' @importFrom assertthat assert_that
 #' @importFrom GenomeInfoDb seqlevelsStyle<-
+#' @importFrom intervals Intervals
 #' @importFrom intervals interval_overlap
 #' @import GenomicRanges
 setupRefHcMatrix <- function(order=8, scale=1){
@@ -93,7 +94,7 @@ setupRefHcMatrix <- function(order=8, scale=1){
   ## Add a filler for the last interval missing from the order dataframe
   last_start <- tail(gbin_pos$loc.end,1)
   last_chr <- tail(gbin_pos$end.chr,1)
-  chr_idx <- which(seqnames(chr.size.dat) == last_chr)
+  chr_idx <- which(as.character(seqnames(chr.size.dat)) == last_chr)
   last_end <- end(chr.size.dat[chr_idx,])/scale
   gbin_pos_ord <- rbind(gbin_pos_ord, 
                         data.frame('start'=paste0(last_chr, ":", last_start+1),
