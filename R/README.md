@@ -1,24 +1,31 @@
 # R code for cnvML
 ## Overview
 
-| Code | Figure | Description |
-|------|------|------|
-| compareSFC.R | Fig S1 | Sweep vs Hilbert SFC |
+| Code | Section | Figure | Description |
+|------|------|------|------|
+| plotSFC.R | Preprocessing |  | Plots Hilbert/Sweep ASCN and TCN SFC |
+| compareSFC.R | Supplementary Figure | Fig S1 | Sweep vs Hilbert SFC |
 
 ## Pre-processing
 * plotSFC.R is the main function to plot the Hilbert spacefilling curves for TCGA and the cancer cell line seg files
-```sh
-# ASCN plots using a Sweep SFC
-Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc sweep --dataset ccl_aggregate
-Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc sweep --dataset TCGA
-
-# ASCN plots using a Hilbert SFC
-Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc hilbert --dataset ccl_aggregate
-Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc hilbert --dataset TCGA
-
-# TCN plots using a Hilbert SFC
-Rscript plotSFC.R --cntype 'TCN' --order 8 --maxcn 8 --sfc hilbert --dataset ccl_aggregate
-Rscript plotSFC.R --cntype 'TCN' --order 8 --maxcn 8 --sfc hilbert --dataset TCGA
+```
+Options:
+	-c CNTYPE, --cntype=CNTYPE
+		Copy number to plot: TCN or ASCN [Default=ASCN]
+	-p PDIR, --pdir=PDIR
+		Path to seg files [dir]/[dataset]/input/[seg_file] [Default=/mnt/work1/users/pughlab/projects/cancer_cell_lines]
+	-o ORDER, --order=ORDER
+		Order for space filling curve (SFC) [Default=8]
+	-m MAXCN, --maxcn=MAXCN
+		Max CN to plot to [Default=5]
+	-s SFC, --sfc=SFC
+		Space-filling curve to use, 'sweep' or 'hilbert' [Default=hilbert]
+	-d DATASET, --dataset=DATASET
+		Dataset to use, 'ccl_aggregate' or 'TCGA' [Default=ccl_aggregate]
+	-v, --verbose
+		Print extra output [Default=FALSE]
+	-h, --help
+		Show this help message and exit
 ```
 
 ## Main Figures

@@ -32,7 +32,7 @@ for(order in c(4,6,8)){
   
   ###################################
   #### Set up Sweep Genomic Bins ####
-  bins <- mapSPC(spc='sweep', hc_ord=gbin_pos$ord)
+  bins <- mapSFC(sfc='sweep', hc_ord=gbin_pos$ord)
   
   #########################################################
   #### Visualize difference using HilbertCurve package ####
