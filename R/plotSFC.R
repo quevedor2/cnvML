@@ -8,22 +8,14 @@
 ## Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc hilbert --dataset TCGA
 ## Rscript plotSFC.R --cntype 'TCN' --order 8 --maxcn 8 --sfc hilbert --dataset ccl_aggregate
 ## Rscript plotSFC.R --cntype 'TCN' --order 8 --maxcn 8 --sfc hilbert --dataset TCGA
-
-library(HilbertCurve)
-library(HilbertVis)
-library(circlize)
-library(DescTools)
-library(GenomicRanges)
-library(dplyr)
-library(optparse)
-library(RcnvML)   # devtools::install_github("quevedor2/cnvML/RcnvML", ref='dev')
+suppressPackageStartupMessages(library(optparse))
 
 ####################
 #### Parameters ####
 option_list <- list( 
   make_option(c("-c", "--cntype"), type="character", default='ASCN',
               help="Copy number to plot: TCN or ASCN [default]"),
-  make_option(c("-d", "--dir"), type="character", 
+  make_option(c("-p", "--pdir"), type="character", 
               default='/mnt/work1/users/pughlab/projects/cancer_cell_lines',
               help="Path to seg files [dir]/[dataset]/input/[seg_file] [default]"),
   make_option(c("-o", "--order"), type="integer", default=8,
@@ -39,9 +31,15 @@ option_list <- list(
 )
 opt <- parse_args(OptionParser(option_list=option_list))
 
+########################
+#### Load Libraries ####
+libraries <- c('HilbertCurve', 'circlize', 'DescTools', 
+               'GenomicRanges', 'dplyr', 'RcnvML', 'assertthat')
+null <- lapply(libraries, function(i) suppressMessages(require(i, character.only = TRUE)))
+# devtools::install_github("quevedor2/cnvML/RcnvML", ref='dev')
 
 # Set up parameters
-PDIR <- opt$dir                   # Path to seg files [file.path(PDIR, analysis, input, seg_i)]
+PDIR <- opt$pdir                   # Path to seg files [file.path(PDIR, analysis, input, seg_i)]
 analysis <- opt$dataset           # dataset to analyze (TCGA or ccl_aggregate)
 chr.size.dat <- getChrLength()    # hg19 chromosome sizes
 seqlevelsStyle(chr.size.dat) <- 'NCBI'  # Chr labelling style
@@ -64,9 +62,7 @@ assert_that(length(analysis)==1, any(c('ccl_aggregate', 'TCGA') %in% analysis),
             msg='--dataset must be either "ccl_aggregate" or "TCGA"')
 assert_that(is.integer(order), length(order)==1, order>3,
             msg='--order must be a single integer greater than 3')
-assert_that(is.integer(order), length(order)==1, order>3,
-            msg='--order must be a single integer greater than 3')
-assert_that(is.integer(opt$maxcn), length(opt$maxcn)==1, opt$maxcn>2,
+assert_that(is.numeric(opt$maxcn), length(opt$maxcn)==1, opt$maxcn>2,
             msg='--maxcn must be a single integer greater than 2')
 
 ###########################
@@ -82,6 +78,7 @@ seg_files <- switch(analysis,
 
 ####################
 #### Seg to SFC #### 
+uids <- NULL    # placeholder for SFC mapping
 for(seg_i in seg_files){
   segf <- file.path(PDIR, analysis, "input", seg_i)
   segd <- read.table(segf, sep="\t", header=TRUE, stringsAsFactors = FALSE)
@@ -138,8 +135,9 @@ for(seg_i in seg_files){
       hc_obj <- setupRefHcMatrix(order = order, scale=scale)
       if(sfc == 'sweep'){
         if(verbose) print("Using a Sweep SFC")
-        bins <- mapSPC(spc='sweep', hc_ord=hc_obj$ord)
+        bins <- mapSFC(sfc='sweep', hc_ord=hc_obj$ord, uids=uids)
         hc_obj$hc@POS <- bins[-nrow(bins),c('x1', 'y1', 'x2', 'y2')]
+        uids <- bins$uid
       }
       
       
@@ -149,12 +147,12 @@ for(seg_i in seg_files){
       # values when mixing
       chr.data <- addCumPos(seg, chr.size.dat, dat.type='seg')
       ir <- IRanges(chr.data$cloc.start/scale, chr.data$cloc.end/scale)
-      if(cntype='TCN'){
+      if(cntype=='TCN'){
         # Expecting column: Modal_Total_CN
         assert_that(all(c('Modal_Total_CN') %in% colnames(chr.data)),
                     msg='Could not find both Modal_Total_CN in chr.data')
         cols <- a1(chr.data$Modal_Total_CN)
-      } else (cntype='ASCN'){
+      } else if (cntype=='ASCN'){
         # Expecting column: Modal_HSCN_1, Modal_HSCN_2
         assert_that(all(c('Modal_HSCN_1', 'Modal_HSCN_2') %in% colnames(chr.data)),
                     msg='Could not find both Modal_HSCN_1/2 in chr.data')
