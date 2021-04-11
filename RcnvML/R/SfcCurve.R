@@ -64,7 +64,7 @@ SfcCurve <- function(s, e, level = 4, mode = c("normal", "pixel"),
   if(is.null(zoom)) zoom = 10*(4^level-1)/(e - s)
   hc@ZOOM = zoom
   
-  pos = HilbertCurve:::hilbertCurve(level)
+  pos = hilbertCurve(level)
   start_from = match.arg(start_from)[1]
   first_seg = match.arg(first_seg)[1]
   
