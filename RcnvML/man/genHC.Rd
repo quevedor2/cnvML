@@ -4,12 +4,16 @@
 \alias{genHC}
 \title{Initiailize HilbertCurve object}
 \usage{
-genHC(end, order)
+genHC(end, order, mode = "pixel", sfc_pos = NULL)
 }
 \arguments{
 \item{end}{Typically, the size of the genome [integer]}
 
 \item{order}{Order to generate hilbert curve for [integer]}
+
+\item{mode}{'pixel' or 'normal', default is 'pixel'}
+
+\item{sfc_pos}{POS values for SFC mapping [dataframe]}
 }
 \value{
 an object from HilbertCurve::HilbertCurve()
