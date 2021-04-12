@@ -34,12 +34,12 @@ Options:
 
 ## Supplementary Figures
 ### arrowsSFC.R 
-This piece of code is used to generate **Supplementary Figure 2: Mapping of Hilbert and Sweep space filling curves**.
+This piece of code is used to generate **Supplementary Figure 1: Mapping of Hilbert and Sweep space filling curves**.
 
 Using a 4th and 6th orders/level, it repurposes the `HilbertCurve::HilbertCurve()` function to generate a directional graph of either a HilbertCurve or a SweepCurve. This adapted function allows for the input of a different positional space (@POS), which allows for a Sweep Curve to be used. If no `sfc_pos` positional space is given, it defaults to the innate Hilbert Curve space.
 
 ### compareSFC.R 
-This piece of code is used to generate **Supplementary Figure 1: Comparison between Hilbert and Sweep space filling curves**.
+This piece of code is used to generate **Supplementary Figure 2: Comparison between Hilbert and Sweep space filling curves**.
 
 Using several different orders/levels (4, 6, 8), it will generate a Hilbert and Sweep space-filling curve using the standard hg19 genome, colored by chromosomes. It will then run a Euclidean distance between adjacent regions in the 2D space for both SFC.
 
