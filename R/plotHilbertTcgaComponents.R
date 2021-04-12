@@ -1,3 +1,9 @@
+# Purpose: ?
+
+# Description:  Uses the importance feature map created from the 
+## GradCAM approach and maps it back to the individual samples
+## to extract what the meaningful features are from each
+
 library(HilbertCurve)
 library(HilbertVis)
 library(circlize)

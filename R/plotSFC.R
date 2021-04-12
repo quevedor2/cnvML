@@ -51,7 +51,7 @@ breaks <- seq(0, opt$maxcn, by=0.1) # Where to add the breaks for Chr Integer CN
 add_1000g <- TRUE                 # Adds 1000G data to the TCGA seg file
 sfc <- opt$sfc                    # whether to use a hilbert SFC or sweep
 verbose <- FALSE                  # Verbose, TRUE or FALSE
-cntype <- opt$cntype                # Plot ASCN or TCN as colours
+cntype <- opt$cntype              # Plot ASCN or TCN as colours
 
 # Asserts
 assert_that(length(cntype)==1, any(c('TCN', 'ASCN') %in% cntype), 
