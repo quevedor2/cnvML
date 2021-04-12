@@ -28,3 +28,16 @@
 #' }
 #' @source \url{https://www.cancerrxgene.org/celllines}
 "onco_meta_df"
+
+#' Mapping between TCGA IDs, cell line IDs, filenames and cancer type
+#'
+#' A list containing the onco_meta_df dataframe, or a TCGA metadata
+#' dataframe containing the mapping between sample IDs and their
+#' oncotree code.
+#'
+#' @format A list with 2 elements containing dataframes:
+#' \describe{
+#'   \item{ccl}{data frame of onco_meta_df}
+#'   \item{tcga}{2 column dataframe of sampleID to oncocode}
+#' }
+"onco_meta"
