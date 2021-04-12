@@ -30,7 +30,7 @@ option_list <- list(
 opt <- parse_args(OptionParser(option_list=option_list))
 
 ## Load libraries
-libraries <- c('filesstrings', 'RcnvML', 'assertthat')
+libraries <- c('RcnvML', 'assertthat')
 null <- lapply(libraries, function(i) suppressMessages(require(i, character.only = TRUE)))
 # Set up parameters
 PDIR <- opt$pdir          # Path to seg files [file.path(PDIR, analysis, input, seg_i)]
@@ -62,28 +62,15 @@ if(analysis == 'ccl_aggregate'){
   datasets <- c('GDSC', 'CCLE', 'GNE')
   onco_meta_df$GDSC <- gsub(".cel$", "", onco_meta_df$GDSC, ignore.case = TRUE)
   
-  copy_status <- sapply(fls, function(fl_i){
-    # Map file to the onco_meta_df
-    print(fl_i)
-    i <- gsub(".png$", "", fl_i)
-    idx <- which(i == onco_meta_df[,datasets], arr.ind=TRUE)
-    
-    # Identity dataset and oncocode
-    ds <- datasets[idx[,2]]
-    oncocode <- as.character(gsub(":.*", "", onco_meta_df[idx[,1],]$oncocode))
-    
-    # Copy file to new locations
-    if(length(ds) > 0 & length(oncocode) > 0){
-      target_dir = file.path("output", sfc, cntype, ds, oncocode)
-    } else {
-      target_dir = file.path("output", sfc, cntype, "unknown")
-    }
-    if(!dir.exists(target_dir)) dir.create(target_dir, recursive = TRUE)
-    file.copy(file.path("output", sfc, cntype, fl_i),
-              file.path(target_dir, fl_i), overwrite = TRUE)
-  })
+  copy_status <- sapply(fls, mvFileToOncocode,  meta_df=onco_meta_df, 
+                        datasets =datasets, pattern=".png$", 
+                        sfc=sfc, cntype=cntype, rmfile=TRUE)
 } else if(analysis=='TCGA'){
-  data("onco_meta_df")
+  data("onco_meta")
+  tcga_onco_df <- onco_meta[['tcga']]
   
+  copy_status <- sapply(fls, mvFileToOncocode,  meta_df=tcga_onco_df, 
+                        datasets ='ID', pattern="-[0-9]*\\.png$", 
+                        sfc=sfc, cntype=cntype, rmfile=TRUE)
 }
   

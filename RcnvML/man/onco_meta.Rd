@@ -9,9 +9,6 @@
   \item{ccl}{data frame of onco_meta_df}
   \item{tcga}{2 column dataframe of sampleID to oncocode}
 }}
-\source{
-\url{}
-}
 \usage{
 onco_meta
 }
