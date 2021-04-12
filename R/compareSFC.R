@@ -52,8 +52,9 @@ for(order in c(4,6,8)){
   
   # Genomic Tiling
   pdf(paste0("chrom-tile_ord", order, ".pdf"))
-  hc <- genHC(max(chr.size.dat$cum.end)/scale, order)
-  hc@POS <- bins[-nrow(bins),c('x1', 'y1', 'x2', 'y2')]
+  hc <- genHC(max(chr.size.dat$cum.end)/scale, order,
+              sfc_pos=bins[-nrow(bins),c('x1', 'y1', 'x2', 'y2')])
+  # hc@POS <- bins[-nrow(bins),c('x1', 'y1', 'x2', 'y2')]
   hc_layer(hc, ir, mean_mode = "absolute", col = col_vector[1:24])
   hc_layer(hc, fgfr3, mean_mode = "absolute", col = 'black')
   dev.off()

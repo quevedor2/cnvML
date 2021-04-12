@@ -4,7 +4,10 @@
 #' using only a set end point and order
 #'
 #' @param end Typically, the size of the genome [integer]
+#' @param mode 'pixel' or 'normal', default is 'pixel'
+#' @param sfc_pos POS values for SFC mapping [dataframe]
 #' @param order Order to generate hilbert curve for [integer]
+#'
 #' @return
 #' an object from HilbertCurve::HilbertCurve()
 #' @export
@@ -14,15 +17,17 @@
 #' @importFrom utils tail
 #' @importFrom grid unit
 #' 
-genHC <- function(end, order){
+genHC <- function(end, order, mode='pixel', sfc_pos=NULL){
   assert_that(is.numeric(end), end > 1, length(end)==1,
               msg="'end' must be a single integer greater than 1")
-  assert_that(is.integer(order), end > 2, length(end)==1,
+  assert_that(is.numeric(order), end > 2, length(end)==1,
               msg="'order' must be a single integer greater than 2")
   
-  hc = HilbertCurve(1, end, level = order, mode = "pixel", 
-                    reference = TRUE, padding=unit(1, "mm"),
-                    newpage = FALSE)
+  # SfcCurve is a copy of HilbertCurve::HilbertCurve() function but allows
+  # for an import of @POS values for a different SFC mapping
+  hc = SfcCurve(1, end, level = order, mode = mode, 
+                reference = TRUE, padding=unit(1, "mm"),
+                newpage = FALSE, sfc_pos=sfc_pos)
   return(hc)
 }
 
@@ -80,8 +85,8 @@ setupRefHcMatrix <- function(order=8, scale=1){
   names(adjstart_pos) <- gsub("^chr", "", names(adjstart_pos), ignore.case = T)
   gbin_df$end.chr <-  gbin_df$start.chr <- names(adjstart_pos)
   gbin_df$end.chr[spans_chrs] <- names(adjstart_pos)[spans_chrs+1]
-  gbin_df$start <- with(gbin_df, paste0(start.chr, ":", loc.start))
-  gbin_df$end <- with(gbin_df, paste0(end.chr, ":", loc.end))
+  gbin_df$start <- paste0(gbin_df$start.chr, ":", gbin_df$loc.start)
+  gbin_df$end <- paste0(gbin_df$end.chr, ":", gbin_df$loc.end)
   
   ## Combine genomic position with HC matrix pos
   gbin_pos <- cbind(gbin_df, hc@POS)
@@ -89,7 +94,7 @@ setupRefHcMatrix <- function(order=8, scale=1){
   gbin_pos_ord <- gbin_pos[order(gbin_pos$y1, decreasing = TRUE),]
   gbin_pos_ord <- gbin_pos_ord[order(gbin_pos_ord$x1, decreasing=FALSE),]
   ## Associate position in matrix (UID) with a genomic position (start, end)
-  gbin_pos_ord$uid <- with(gbin_pos_ord, paste(x1, y1, sep="_"))
+  gbin_pos_ord$uid <- paste(gbin_pos_ord$x1, gbin_pos_ord$y1, sep="_")
   
   ## Add a filler for the last interval missing from the order dataframe
   last_start <- tail(gbin_pos$loc.end,1)

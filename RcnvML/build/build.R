@@ -24,9 +24,12 @@ usethis::use_package("GenomeInfoDb")
 usethis::use_package("BSgenome.Hsapiens.UCSC.hg19")
 usethis::use_package("ComplexHeatmap")
 usethis::use_package("grid")
+usethis::use_package("HilbertVis")
 usethis::use_package("abind")
 usethis::use_package("BiocGenerics")
 usethis::use_package("grDevices")
+usethis::use_package("IRanges")
+
 
 #### Building ####
 devtools::load_all()
@@ -37,4 +40,5 @@ devtools::check(pkg)
 devtools::build(pkg)
 devtools::install(pkg)
 # devtools::install_github("quevedor2/aneuploidy_score")
-devtools::install_github("quevedor2/RocheTest", ref = "dev")
+devtools::install_github("quevedor2/cnvML/RcnvML", ref = "dev")
+
