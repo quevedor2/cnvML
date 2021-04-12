@@ -49,7 +49,6 @@ assert_that(length(analysis)==1, any(c('ccl_aggregate', 'TCGA') %in% analysis),
 #### Main ####
 ##############
 setwd(file.path(PDIR, analysis))
-data("onco_meta_df")
 
 ## List all hilbert files
 fls <- list.files(file.path("output", sfc, cntype), pattern="png$")
@@ -57,6 +56,8 @@ assert_that(length(fls) > 1,
             msg='Could not locate SFC png images outputed from plotSFC.R')
 
 if(analysis == 'ccl_aggregate'){
+  data("onco_meta_df")  # pre-curated oncocode designation
+  
   ## Assigns the CCL files to different oncocode directories
   datasets <- c('GDSC', 'CCLE', 'GNE')
   onco_meta_df$GDSC <- gsub(".cel$", "", onco_meta_df$GDSC, ignore.case = TRUE)
@@ -82,6 +83,7 @@ if(analysis == 'ccl_aggregate'){
               file.path(target_dir, fl_i), overwrite = TRUE)
   })
 } else if(analysis=='TCGA'){
+  data("onco_meta_df")
   
 }
   
