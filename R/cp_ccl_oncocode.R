@@ -8,8 +8,12 @@
 #### Main ####
 ##############
 library(filesstrings)
+library(RcnvML)
+
+
 PDIR <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines/ccl_aggregate'
-meta_df <- readRDS(file.path(PDIR, "ref", "onco_meta_df.rds"))
+data("onco_meta_df")
+# meta_df <- readRDS(file.path(PDIR, "ref", "onco_meta_df.rds"))
 
 ## List all hilbert files
 fls <- list.files(file.path(PDIR, "output", "hilbert"), pattern="png$")

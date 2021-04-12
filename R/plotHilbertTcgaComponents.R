@@ -4,79 +4,11 @@ library(circlize)
 library(DescTools)
 library(GenomicRanges)
 library(dplyr)
+library(RcnvML)   # devtools::install_github("quevedor2/cnvML/RcnvML")
+
 
 ###################
 #### Functions ####
-## ## ##
-## Visualization functions
-alphaIt <- function(matX, col, alpha=0.5){
-  #x <- abs(1-(matX/255))
-  x <- (matX/255)
-  
-  col_ramp <- colorRampPalette(colors = c("white", col))(255)
-  feat_cols <- col_ramp[matX+1]
-  feat_rgb <- col2rgb(feat_cols)
-  
-  x2 <- abind::abind(matrix(feat_rgb[1,]/255, ncol=ncol(matX)), 
-                     matrix(feat_rgb[2,]/255, ncol=ncol(matX)), 
-                     matrix(feat_rgb[3,]/255, ncol=ncol(matX)), 
-                     x/(1/alpha), along=3 )
-  return(x2)
-}
-
-## ## ##
-## Map Chr Pos to Hilbert
-getChrLength <- function(){
-  require(BSgenome.Hsapiens.UCSC.hg19)
-  chr.lengths = seqlengths(Hsapiens)[1:24]
-  chr.len.gr <- makeGRangesFromDataFrame(data.frame("chrom"=names(chr.lengths),
-                                                    "loc.start"=rep(1, length(chr.lengths)),
-                                                    "loc.end"=chr.lengths))
-  chr.len.gr$cum.end <- cumsum(as.numeric(end(chr.len.gr)))
-  chr.len.gr$cum.start <- chr.len.gr$cum.end - (end(chr.len.gr) -1)
-  chr.len.gr$cum.mid <- (chr.len.gr$cum.start + ((chr.len.gr$cum.end - chr.len.gr$cum.start)/2))
-  return(chr.len.gr)
-}
-
-setupRefHcMatrix <- function(order=8){
-  chr.size.dat <- getChrLength()
-  seqlevelsStyle(chr.size.dat) <- 'NCBI'
-  
-  hc = HilbertCurve(1, max(chr.size.dat$cum.end), 
-                    level = order, mode = "pixel", 
-                    reference = TRUE, padding=unit(1, "mm"),newpage = FALSE)
-  
-  ## Identify the intervals for each HC bin by dividing by the zoom factor
-  bin_df <- data.frame(start = round(start(hc@BINS) / hc@ZOOM),
-                       end = round(end(hc@BINS) / hc@ZOOM))
-  
-  ## For each interval, identify the corresponding genomic position by mapping cumulative pos
-  gbin_df <- apply(bin_df, 1, function(i){
-    rng <- sapply(c('start', 'end'), function(id){
-      idx <- which(((i[id] + 1) >= chr.size.dat$cum.start) &
-                     ((i[id] + 1) <= chr.size.dat$cum.end))
-      gpos <- start(chr.size.dat)[idx] + ((i[id]+1) - chr.size.dat$cum.start[idx])
-      seq <- as.character(seqnames(chr.size.dat))[idx]
-      paste(c(seq, gpos), collapse=":")
-    })
-    rng
-  })
-  gbin_df <- as.data.frame(t(gbin_df))
-  
-  ## Combine genomic position with HC matrix pos
-  gbin_pos <- cbind(gbin_df, hc@POS)
-  gbin_pos_ord <- gbin_pos[order(gbin_pos$y1, decreasing = TRUE),]
-  gbin_pos_ord <- gbin_pos_ord[order(gbin_pos_ord$x1, decreasing=FALSE),]
-  ## Associate position in matrix (UID) with a genomic position (start, end)
-  gbin_pos_ord$uid <- with(gbin_pos_ord, paste(x1, y1, sep="_"))
-  gbin_pos_ord <- rbind(gbin_pos_ord, 
-                        data.frame('start'='Y:59279092', 'end'='Y:59326329',
-                                   'x1'=255, 'y1'=0, 'x2'=256, 'y2'=0, 'uid'='255_0'))
-  ## Reform the HC matrix using UIDs instead of mapping information
-  gbin_pos_mat <- matrix(gbin_pos_ord$uid, nrow=max(gbin_pos_ord$y1)+1, ncol=max(gbin_pos_ord$x1)+1)
-  return(list("mat"=gbin_pos_mat, "ord"=gbin_pos_ord))
-}
-
 overlapMatToRefHc <- function(alt_mat, ref_mat){
   nr2 <- nrow(alt_mat)
   nr1 <- nrow(ref_mat)
@@ -134,35 +66,6 @@ mapHcToGpos <- function(cam, ref, returngr=FALSE){
     ref <- refgr
   }
   return(ref)
-}
-
-calcCumulativeGPos <- function(gr0, seqstyle='ENSEMBL'){
-  chrs <- getChrLength()
-  seqlevelsStyle(chrs) <- seqstyle
-  
-  gr0 <- unlist(as(lapply(split(gr0, seqnames(gr0)), function(chr_gr){
-    # Matches chr position
-    chr_id <- unique(as.character(seqnames(chr_gr)))
-    ref_idx <- match(chr_id, as.character(seqnames(chrs)))
-    # Calculates cumulative position
-    chr_gr$cum.start <- start(chr_gr) + chrs[ref_idx,]$cum.start - 1
-    chr_gr$cum.end<- end(chr_gr) + chrs[ref_idx,]$cum.start - 1
-    return(chr_gr)
-  }), "GRangesList"))
-  return(gr0)
-}
-
-intersectAndAnnotate <- function(s_gr, ref_gr, cpos=TRUE){
-  ## Intersects s_gr with ref_gr, then annotates all of s_gr component
-  ## on the new intersect
-  print(unique(s_gr$ID))
-  end(s_gr) <- end(s_gr)-1 # Prevents merging of adjacent segments
-  int_gr <- intersect(ref_gr, s_gr, ignore.strand=FALSE)
-  ov_idx <- findOverlaps(int_gr, s_gr)
-  mcols(int_gr) <- mcols(s_gr[subjectHits(ov_idx),])
-  if(cpos) int_gr <- calcCumulativeGPos(int_gr)
-  
-  return(int_gr)
 }
 
 ##################
