@@ -8,6 +8,7 @@
 | <a href="#comparesfcr">compareSFC.R</a> | Supplementary Figure | Fig S2 | Sweep vs Hilbert SFC |
 
 ## Pre-processing
+### plotSFC.R
 * plotSFC.R is the main function to plot the Hilbert spacefilling curves for TCGA and the cancer cell line seg files
 ```
 Options:
