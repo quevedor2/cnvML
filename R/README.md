@@ -3,9 +3,9 @@
 
 | Code | Section | Figure | Description |
 |------|------|------|------|
-| plotSFC.R | Preprocessing |  | Plots Hilbert/Sweep ASCN and TCN SFC |
-|  <a href="#arrowssfc.r">arrowsSFC.R</a> | Supplementary Figure | Fig S1 | Mapping of SFC |
-| compareSFC.R | Supplementary Figure | Fig S2 | Sweep vs Hilbert SFC |
+| <a href="#plotsfcr">plotSFC.R</a> | Preprocessing |  | Plots Hilbert/Sweep ASCN and TCN SFC |
+|  <a href="#arrowssfcr">arrowsSFC.R</a> | Supplementary Figure | Fig S1 | Mapping of SFC |
+| <a href="#comparesfcr">compareSFC.R</a> | Supplementary Figure | Fig S2 | Sweep vs Hilbert SFC |
 
 ## Pre-processing
 * plotSFC.R is the main function to plot the Hilbert spacefilling curves for TCGA and the cancer cell line seg files
