@@ -14,9 +14,7 @@
     <li>
       <a href="#usage">Usage</a>
       <ul>
-        <li><a href="#importing-biomedical-data">Importing biomedical data</a></li>
-        <li><a href="#data-visualization">Data visualization</a></li>
-        <li><a href="#group-comparisons">Group comparisons</a></li>
+        <li><a href="#function-placeholder">Function Placeholder</a></li>
       </ul>
     </li>
   </ol>
@@ -41,3 +39,4 @@ devtools::install_github('quevedor2/cnvML/RcnvML')
 ```
 
 ## Usage
+### Function Placeholder
