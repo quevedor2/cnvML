@@ -1,3 +1,13 @@
+# Purpose: cnvML-Supplementary Figure 1
+
+# Description:  Map Space-Filling Curves (SFC)
+## This script is meant to plot the mapping direction of a
+## Hilbert space filling curve at 4th and 6th order, as well
+## as a Sweep space filling curve at the same orders. It is
+## designed to highlight how the 1D->2D mapping differs between
+## the two approaches and not address the issues of locality
+## or recursiveness
+
 library(GenomicRanges)
 PDIR <-'/mnt/work1/users/pughlab/projects/cancer_cell_lines/cnvML/hilbert_modeling'
 setwd(PDIR)
