@@ -20,7 +20,7 @@
 genHC <- function(end, order, mode='pixel', sfc_pos=NULL){
   assert_that(is.numeric(end), end > 1, length(end)==1,
               msg="'end' must be a single integer greater than 1")
-  assert_that(is.integer(order), end > 2, length(end)==1,
+  assert_that(is.numeric(order), end > 2, length(end)==1,
               msg="'order' must be a single integer greater than 2")
   
   # SfcCurve is a copy of HilbertCurve::HilbertCurve() function but allows
