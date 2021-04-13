@@ -49,4 +49,17 @@ Rscript plotSFC.R --cntype 'TCN' --order 8 --maxcn 8 --sfc hilbert --dataset TCG
 ```
 
 ## Mapping features to cancer type
-The following commands were used to create the SFC images
+The R script [assignOncocode.R](https://github.com/quevedor2/cnvML/blob/master/R/assignOncocode.R) is used to redirect the otput of the plotSFC png images into a directory structure of oncocodes. This is meant to be fed into pickle for downstream neural network building. The mapping is obtained from the data() files from the RcnvML package:
+```
+# ASCN plots using a Sweep SFC
+Rscript assignOncocode.R --cntype 'ASCN' --sfc sweep --dataset ccl_aggregate
+Rscript assignOncocode.R --cntype 'ASCN' --sfc sweep --dataset TCGA
+
+# ASCN plots using a Hilbert SFC
+Rscript assignOncocode.R --cntype 'ASCN' --sfc hilbert --dataset ccl_aggregate
+Rscript assignOncocode.R --cntype 'ASCN' --sfc hilbert --dataset TCGA
+
+# TCN plots using a Hilbert SFC
+Rscript assignOncocode.R --cntype 'TCN' --sfc hilbert --dataset ccl_aggregate
+Rscript assignOncocode.R --cntype 'TCN' --sfc hilbert --dataset TCGA
+```
