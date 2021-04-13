@@ -4,6 +4,7 @@
 | Code | Section | Figure | Description |
 |------|------|------|------|
 | <a href="#plotsfcr">plotSFC.R</a> | Preprocessing |  | Plots Hilbert/Sweep ASCN and TCN SFC |
+| <a href="#assignoncocoder">assignOncocode.R</a> | Preprocessing |  | Moves SFC pngs to oncocode directory structure |
 |  <a href="#arrowssfcr">arrowsSFC.R</a> | Supplementary Figure | Fig S1 | Mapping of SFC |
 | <a href="#comparesfcr">compareSFC.R</a> | Supplementary Figure | Fig S2 | Sweep vs Hilbert SFC |
 
@@ -26,6 +27,24 @@ Options:
 		Dataset to use, 'ccl_aggregate' or 'TCGA' [Default=ccl_aggregate]
 	-v, --verbose
 		Print extra output [Default=FALSE]
+	-h, --help
+		Show this help message and exit
+```
+
+### assignOncocode.R
+* assignOncocode.R uses the datasets built into RcnvML to categorize each outputed SFC png file into a directory for their oncocode. This is meant to facilitate the directory structure needed to `pickle` the data.
+```
+Options:
+	-c CNTYPE, --cntype=CNTYPE
+		Copy number to plot: TCN or ASCN [ASCN]
+	-p PDIR, --pdir=PDIR
+		Path to seg files [dir]/[dataset]/input/[seg_file] [/mnt/work1/users/pughlab/projects/cancer_cell_lines]
+	-s SFC, --sfc=SFC
+		Space-filling curve to use, 'sweep' or 'hilbert' [hilbert]
+	-d DATASET, --dataset=DATASET
+		Dataset to use, 'ccl_aggregate' or 'TCGA' [ccl_aggregate]
+	-v, --verbose
+		Print extra output [FALSE]
 	-h, --help
 		Show this help message and exit
 ```
