@@ -51,7 +51,7 @@ assert_that(length(analysis)==1, any(c('ccl_aggregate', 'TCGA') %in% analysis),
 setwd(file.path(PDIR, analysis))
 
 ## List all hilbert files
-fls <- list.files(file.path("output", sfc, cntype), pattern="png$")
+fls <- list.files(file.path("output", sfc, cntype), pattern="\\.png$")
 assert_that(length(fls) > 1, 
             msg='Could not locate SFC png images outputed from plotSFC.R')
 
@@ -68,6 +68,7 @@ if(analysis == 'ccl_aggregate'){
 } else if(analysis=='TCGA'){
   data("onco_meta")
   tcga_onco_df <- onco_meta[['tcga']]
+  tcga_onco_df <- unique(tcga_onco_df)
   
   copy_status <- sapply(fls, mvFileToOncocode,  meta_df=tcga_onco_df, 
                         datasets ='ID', pattern="-[0-9]*\\.png$", 
