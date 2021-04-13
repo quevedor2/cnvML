@@ -1,4 +1,4 @@
-# Purpose: cnvML-Supplementary Figure 1
+# Purpose: cnvML-Supplementary Figure 2
 
 # Description:  Compare Space-Filling Curves (SFC)
 ## This script is meant to take the cytoband information

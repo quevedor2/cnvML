@@ -40,8 +40,11 @@ oncocode_api <- function(name){
   }
 }
 
+
 #### MAIN ####
-##################
+##############
+
+#### CCL ####
 library(httr)
 library(jsonlite)
 
@@ -110,10 +113,23 @@ ccl_oncocode <- lapply(meta.df$CVCL, function(cvcl, verbose=FALSE){
 ccl_oncocode <- as.data.frame(do.call(rbind, ccl_oncocode))
 
 
-
-
 ## Append and save data structure
 meta.df <- cbind(meta.df, ccl_oncocode[,-1])
 onco_meta_df <- meta.df
-usethis::use_data(onco_meta_df, overwrite = T)
+
+#### TCGA ####
+## Upload the TCGA metadata and append it to the established data structure
+pdir <- '~/git/cnvML/RcnvML/data-raw'
+setwd(pdir)
+
+tcga_anno <- read.table("merged_sample_quality_annotations.fix.tsv", sep="\t",
+                        header = T, check.names = F, stringsAsFactors = F, 
+                        quote = "", comment.char = "", fill = T)
+tcga_snp6 <- split(tcga_anno, tcga_anno$platform)[['Genome_Wide_SNP_6']]
+tcga_onco_df <- data.frame("ID"=tcga_snp6$patient_barcode,
+                           "oncocode"=tcga_snp6$`cancer type`)
+onco_meta <- list("ccl"=onco_meta_df,
+                  "tcga"=tcga_onco_df)
+usethis::use_data(onco_meta, overwrite = T)
+# usethis::use_data(onco_meta_df, overwrite = T)
 #saveRDS(meta.df, file=file.path(pdir, "onco_meta_df.rds"))
