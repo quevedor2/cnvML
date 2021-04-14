@@ -32,7 +32,7 @@ Options:
 ```
 
 ### assignOncocode.R
-* assignOncocode.R uses the datasets built into RcnvML to categorize each outputed SFC png file into a directory for their oncocode. This is meant to facilitate the directory structure needed to `pickle` the data.
+* assignOncocode.R uses the datasets built into RcnvML to categorize each outputed SFC png file into a directory for their oncocode. This is meant to facilitate the directory structure needed to `pickle` the data, done with `common/pickle_hilbert.py` script.
 ```
 Options:
 	-c CNTYPE, --cntype=CNTYPE
