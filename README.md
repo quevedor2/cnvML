@@ -63,3 +63,17 @@ Rscript assignOncocode.R --cntype 'ASCN' --sfc hilbert --dataset TCGA
 Rscript assignOncocode.R --cntype 'TCN' --sfc hilbert --dataset ccl_aggregate
 Rscript assignOncocode.R --cntype 'TCN' --sfc hilbert --dataset TCGA
 ```
+
+## Preprocessing input for tensorflow
+The python script [pickle_hilbert.py](https://github.com/quevedor2/cnvML/blob/master/common/pickle_hilbert.py) is used to create pickle structures of the SFC png images that have been sectioned off into their oncocodes. It will also reshape the images to have a consistent img size (300), and randomly shuffle the data (while maintaining the labels) to allow for training/test groups at a later stage.
+```
+# Pickle the TCGA data
+python pickle_hilbert.py -a TCGA -s sweep -c ASCN -d /cluster/projects/pughlab/projects/cancer_cell_lines/
+python	pickle_hilbert.py -a TCGA -s hilbert -c ASCN -d /cluster/projects/pughlab/projects/cancer_cell_lines/
+python	pickle_hilbert.py -a TCGA -s hilbert -c TCN -d /cluster/projects/pughlab/projects/cancer_cell_lines/
+
+# Pickle the CCL data
+python	pickle_hilbert.py -a CCL -s sweep -c ASCN -d /cluster/projects/pughlab/projects/cancer_cell_lines/
+python	pickle_hilbert.py -a CCL -s hilbert -c ASCN -d /cluster/projects/pughlab/projects/cancer_cell_lines/
+python	pickle_hilbert.py -a CCL -s hilbert -c TCN -d /cluster/projects/pughlab/projects/cancer_cell_lines/
+```
