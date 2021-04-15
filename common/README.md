@@ -8,17 +8,20 @@
 
 ## Pre-processing
 ### pickle_hilbert.py
-* pickle_hilbert.py is 
+* pickle_hilbert.py is designed to work the outputted directory structure from `R/assignOncocode.R`. It has 4 main functions: 1) to search each directory within the path for pngs and classify them according to their directory, 2) to reshape the image to a standard size (300x300), 3) to shuffle the order of the images (`X`) while maintaining their associated label (`y`), and 4) to output a pickle file that will be used for downstream tensorflow applications. As such, it will output 4 files, `X.pickle`, `Xids.pickle`, `y.pickle`, and `yids.pickle` to the `[dir]/[analysis]/data/[sfc]/[cntype]` directory.
+
 ```
+pickle_hilbert.py -a <analysis> -s <sfc> -c <cntype> -d <dir>
+
 Options:
-	-c CNTYPE, --cntype=CNTYPE
-		Copy number to plot: TCN or ASCN [Default=ASCN]
+	-a CNTYPE, --cntype=CNTYPE
+		Copy number to plot: TCN or ASCN
 	-d DIR, --dir=DIR
-		Path to seg files [dir]/[dataset]/input/[seg_file] [Default=/mnt/work1/users/pughlab/projects/cancer_cell_lines]
+		Path to png oncocode separated files [dir]/[analysis]/data/[sfc]/[cntype]
 	-s SFC, --sfc=SFC
-		Space-filling curve to use, 'sweep' or 'hilbert' [Default=hilbert]
+		Space-filling curve to use, 'sweep' or 'hilbert'
 	-a ANALYSIS, --analysis=ANALYSIS
-		Dataset to use, 'ccl_aggregate' or 'TCGA' [Default=ccl_aggregate]
+		Dataset to use, 'CCL' or 'TCGA'
 
 ```
 
