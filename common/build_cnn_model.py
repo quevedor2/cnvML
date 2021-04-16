@@ -337,6 +337,7 @@ if not os.path.exists(os.path.join(OUTDIR, model_type, 'model_' + str(lr) + '.h5
     hist = M.model.fit(x_train, y_train_one_hot, batch_size=32, epochs=10, validation_split=0.2)
     M.model.evaluate(x_test, y_test_one_hot)[1]
     M.model.save(os.path.join(OUTDIR, model_type, 'model_' + str(lr) + '.h5'))
+    print("Model saved: " + os.path.join(OUTDIR, model_type, 'model_' + str(lr) + '.h5'))
     plot_loss_accuracy(hist, os.path.join(OUTDIR, model_type, "cnn_performance.png"))
     M=M.model
 else:
