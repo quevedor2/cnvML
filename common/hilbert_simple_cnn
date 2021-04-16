@@ -269,11 +269,14 @@ from occlusioncnn.occlusion import Occlusion
 
 # VARIABLES
 PDIR='/cluster/projects/pughlab/projects/cancer_cell_lines'
-DATADIR = os.path.join(PDIR, "TCGA", "data")
-OUTDIR = os.path.join(PDIR, "TCGA", "models")
+SFC='sweep'     # sweep or hilbert
+CNTYPE='ASCN'   # TCN or ASCN
+
+DATADIR = os.path.join(PDIR, "TCGA", "data", SFC, CNTYPE)
+OUTDIR = os.path.join(PDIR, "TCGA", "models", SFC, CNTYPE)
 IMG_SIZE=300
-model_type=sys.argv[1]
-lr=sys.argv[2]
+model_type=sys.argv[1]      # 'model4'
+lr=sys.argv[2]              # ''
 CATEGORIES = ["ACC", "BLCA", "BRCA", "CESC", "CHOL", "COAD",
               "DLBC", "ESCA", "GBM", "HNSC", "KICH", "KIRC",
               "KIRP", "LAML", "LGG", "LIHC", "LUAD", "LUSC",
