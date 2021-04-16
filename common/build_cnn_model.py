@@ -278,9 +278,10 @@ model_type=sys.argv[1]    # 'model4'
 lr=sys.argv[2]            # 0.0001
 SFC=sys.argv[3]           # sweep or hilbert
 CNTYPE=sys.argv[4]        # TCN or ASCN
+DATASET=sys.argv[5]        # TCGA or CCL
 
-DATADIR = os.path.join(PDIR, "TCGA", "data", SFC, CNTYPE)
-OUTDIR = os.path.join(PDIR, "TCGA", "models", SFC, CNTYPE)
+DATADIR = os.path.join(PDIR, DATASET, "data", SFC, CNTYPE)
+OUTDIR = os.path.join(PDIR, DATASET, "models", SFC, CNTYPE)
 IMG_SIZE=300
 CATEGORIES = ["ACC", "BLCA", "BRCA", "CESC", "CHOL", "COAD",
               "DLBC", "ESCA", "GBM", "HNSC", "KICH", "KIRC",
@@ -320,8 +321,8 @@ x_test = x_test / 255
 ########################
 # Build/Train ConvNet #
 ########################
-if not os.path.exists(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2.h5')):
-    M=CNN(y, width=IMG_SIZE, height=IMG_SIZE, channel=3)
+if not os.path.exists(os.path.join(OUTDIR, model_type, 'model_' + str(lr) + '.h5')):
+    M=CNN(y, width=IMG_SIZE, height=IMG_SIZE, channel=3, lr=float(lr))
     if model_type=='model1':
         M.model_one()
     elif model_type=='model2':
@@ -335,12 +336,12 @@ if not os.path.exists(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2.h5'
         
     hist = M.model.fit(x_train, y_train_one_hot, batch_size=32, epochs=10, validation_split=0.2)
     M.model.evaluate(x_test, y_test_one_hot)[1]
-    M.model.save(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2.h5'))
+    M.model.save(os.path.join(OUTDIR, model_type, 'model_' + str(lr) + '.h5'))
     plot_loss_accuracy(hist, os.path.join(OUTDIR, model_type, "cnn_performance.png"))
     M=M.model
 else:
     print("Loading existing model...")
-    M = load_model(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2.h5'))
+    M = load_model(os.path.join(OUTDIR, model_type, 'model_' + str(lr) + '.h5'))
 
 ####################
 # Spot-check model #
