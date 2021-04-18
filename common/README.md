@@ -4,6 +4,7 @@
 | Code | Section | Figure | Description |
 |------|------|------|------|
 | <a href="#pickle_hilbertpy">pickle_hilbert.py</a> | Preprocessing |  | Shuffles, resizes, and pickles the input images |
+| 
 
 
 ## Pre-processing
@@ -25,6 +26,28 @@ Options:
 
 ```
 
+### build_cnn_model.py
+ * build_cnn_model.py is designed to work with the outputted pickle files from `common/pickle_hilbert.py`. It runs the four main wrapper functions: 
+   * `load_data.readPickle`: to read in the pickle files for X, Xids, and y
+   * `load_data.balanceAndFormatData`: to balance upsample and downsample some samples in the groups to ensure a base level of samples per group (target is median number of samples across all groups, minimum group inclusion is median/4), convert the y values (oncocode dir names) to one-hot encoding, run a train test split (0.2 fraction, seed=1234), and to normalize all X values to a 0-1 scale (from 0-255)
+   * `model.buildModel`: Builds the CNN model using keras tensorflow and ADAM optimizer. It will fit and evaluate the data before saving the model to an `.h5` file. It will also outplot the loss_accuracy (cnn_performance.png)
+   * `anal.spotcheckModel`: Will take int he model built from buildModel (or read it in if it already exists), and it will plot the confusion matrix for the test class (20% sectioned off from balanceAndFormatData, plot the F1 scores per class, and output those scores as a csv.
+```
+build_cnn_model.py -m <model> -l <lr> -s <sfc> -c <cntype> -d <dir>
+
+Options:
+	-c CNTYPE, --cntype=CNTYPE
+		Copy number to plot: TCN or ASCN
+	-d DATASET, --dataset=DATASET
+		TCGA or CCL
+	-s SFC, --sfc=SFC
+		Space-filling curve to use, 'sweep' or 'hilbert'
+	-l LR, --lr=LR
+		Learning rate to pass in for model training (0.001)
+	-m MODEL, --model=MODEL
+		Which prebuilt CNN model to use (model4)
+
+```
 ## Main Figures
 
 ## Supplementary Figures
