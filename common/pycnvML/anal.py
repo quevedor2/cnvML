@@ -54,10 +54,8 @@ def spotcheckModel(M, x_test, y_test_one_hot, CATEGORIES, outpath):
     
     cm = viz.plot_confusion_matrix(M, x_test, y_test_class, range(0, len(CATEGORIES)),
                                   os.path.join(outpath, "cnn_confusion-matrix.png"))
-    plt.close("all")
     
     f1 = viz.plot_class_cm(cm, os.path.join(outpath, "cnn_cm_barplot.png"))
-    plt.close("all")
     
     np.savetxt(os.path.join(outpath, 'F1_test.csv'),
         f1, fmt='%5.2f', delimiter=",", header='ID,Frac,Cnt,Total')

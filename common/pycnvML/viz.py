@@ -50,6 +50,7 @@ def plot_confusion_matrix(model, X, y, range_y, outfile):
     # Make the heatmaps!!!
     sns.heatmap(pd.DataFrame(cm), annot=True, fmt='d', cmap='YlGnBu', alpha=0.8, vmin=0)
     plt.savefig(outfile)
+    plt.close("all")
     return cm
 
 def plot_class_cm(cm, outfile,metric ='f1'):
@@ -75,6 +76,7 @@ def plot_class_cm(cm, outfile,metric ='f1'):
     plt.subplots_adjust(bottom=0.2, top=0.8)
     plt.xticks(class_id, rotation=90)
     plt.savefig(outfile)
+    plt.close("all")
     
     return class_df
 
