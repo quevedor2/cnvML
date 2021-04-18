@@ -1,3 +1,29 @@
+#!/usr/bin/python
+
+'''
+DESCRIPTION:
+	Takes the pickle files outputted from pickle_hilbert.py. It will use Keras
+    tensorflow to build a CNN using these pickle files. The helper functions are
+    found in the pycnvML modules, while the CNN models can be found in the
+    pycnvML/model.py module. This script will run the pycnvML package to
+    both build the model and do a basic performance assessment of Oncocode
+    predictions.
+
+USAGE:
+	build_cnn_model.py -m <model> -l <lr> -s <sfc> -c <cntype> -d <dir>
+
+EXAMPLES:
+    # runBuildCnnModel.sh:
+    python build_cnn_model.py -m <model_type> -l <lr> -s <SFC> -c <CNTYPE> -d <DATASET>
+    python ~/git/cnvML/common/build_cnn_model.py -m $1 -l $2 -s $3 -c $4 -d $5
+    
+    # queueBuildCnnModel.sh
+	sbatch -J tcga_sweep_ascn_model4_0.0005 runBuildCnnModel.sh model4 0.0005 sweep ASCN TCGA
+    sbatch -J tcga_hilbert_tcn_model4_0.0005 runBuildCnnModel.sh model4 0.0005 hilbert TCN TCGA
+    sbatch -J tcga_hilbert_ascn_model4_0.0005 runBuildCnnModel.sh model4 0.0005 hilbert ASCN TCGA
+'''
+
+
 import os, sys, getopt
 from pycnvML import load_data, model, anal
 #from pyimagesearch.gradcam import GradCAM
