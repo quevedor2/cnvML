@@ -4,7 +4,7 @@ from sklearn.metrics import confusion_matrix
 import seaborn as sns
 import pandas as pd
 import cv2
-from pycnvML.anal import *
+from pycnvML import anal
 
 
 #################
@@ -54,7 +54,7 @@ def plot_confusion_matrix(model, X, y, range_y, outfile):
     return cm
 
 def plot_class_cm(cm, outfile,metric ='f1'):
-    (p, r, f1) = get_F1score(cm)
+    (p, r, f1) = anal.get_F1score(cm)
     if (metric is 'f1'):
         class_frac=f1
     elif (metric is 'p'):
