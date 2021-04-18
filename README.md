@@ -77,3 +77,18 @@ python	pickle_hilbert.py -a CCL -s sweep -c ASCN -d /cluster/projects/pughlab/pr
 python	pickle_hilbert.py -a CCL -s hilbert -c ASCN -d /cluster/projects/pughlab/projects/cancer_cell_lines/
 python	pickle_hilbert.py -a CCL -s hilbert -c TCN -d /cluster/projects/pughlab/projects/cancer_cell_lines/
 ```
+
+## Generating the Models
+The CNN models using the SFC curves can be ran using the `build_cnn_model.py` which utilizes the [pycnvML](https://github.com/quevedor2/cnvML/blob/master/common/pycnvML) package. This base script will generate the models (preset models depicted in [pycnvML/models.py](https://github.com/quevedor2/cnvML/blob/master/common/pycnvML/models.py)), and then do a simple performance assessment (F1-score) and confusion matrix using the built model on the separated out test dataset. Several images are outputted as a result, a confusion matrix (cnn_confusion-matrix.png), a barplot of F1 scores per class (cnn_cm_barplot.png), and the accuracy and loss plots for the training/validation sets (cnn_performance.png).
+```
+#!/bin/bash
+
+#SBATCH -t 24:0:0 
+#SBATCH --mem=80G 
+#SBATCH -p superhimem
+#SBATCH -c 8
+#SBATCH -N 1 
+#SBATCH -o %x-%j.out 
+
+python build_cnn_model.py -m model4 -l 0.0001 -s hilbert -c ASCN -d TCGA
+```
