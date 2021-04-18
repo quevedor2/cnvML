@@ -20,7 +20,7 @@ def readPickle(PDIR, DATASET, SFC, CNTYPE, CATEGORIES, IMG_SIZE=300):
     Xids = pickle.load(pickle_Xids)
     y = pickle.load(pickle_y)
     
-    return(X, Xids, y)
+    return(X, Xids, y, DATADIR, OUTDIR)
 
 def balanceAndFormatData(X, y, Xids, CATEGORIES):
     X,y,Xids = balanceGrp(X, y, Xids, q=0.5)

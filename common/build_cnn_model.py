@@ -44,7 +44,7 @@ def main(argv):
         "SARC", "SKCM", "STAD", "TGCT", "THCA", "THYM",
         "UCEC", "UCS", "UVM", "Normal"]
     
-    (X, Xids, y) = load_data.readPickle(PDIR, DATASET, SFC, CNTYPE, CATEGORIES)
+    (X, Xids, y, DATADIR, OUTDIR) = load_data.readPickle(PDIR, DATASET, SFC, CNTYPE, CATEGORIES)
     
     (x_train, x_test, y_train_one_hot, y_test_one_hot) = load_data.balanceAndFormatData(X, y, Xids, CATEGORIES)
     
