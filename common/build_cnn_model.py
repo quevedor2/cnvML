@@ -5,6 +5,8 @@ from pycnvML import load_data, model, anal
 
 def main(argv):
     PDIR='/cluster/projects/pughlab/projects/cancer_cell_lines'
+    IMG_SIZE=300
+    
     SFC='sweep'     # sweep or hilbert
     CNTYPE='ASCN'   # TCN or ASCN
     model_type='model4'
@@ -44,7 +46,7 @@ def main(argv):
         "SARC", "SKCM", "STAD", "TGCT", "THCA", "THYM",
         "UCEC", "UCS", "UVM", "Normal"]
     
-    (X, Xids, y, DATADIR, OUTDIR) = load_data.readPickle(PDIR, DATASET, SFC, CNTYPE, CATEGORIES)
+    (X, Xids, y, DATADIR, OUTDIR) = load_data.readPickle(PDIR, DATASET, SFC, CNTYPE, CATEGORIES, IMG_SIZE=IMG_SIZE)
     
     (x_train, x_test, y_train_one_hot, y_test_one_hot) = load_data.balanceAndFormatData(X, y, Xids, CATEGORIES)
     
