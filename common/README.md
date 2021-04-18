@@ -4,7 +4,7 @@
 | Code | Section | Figure | Description |
 |------|------|------|------|
 | <a href="#pickle_hilbertpy">pickle_hilbert.py</a> | Preprocessing |  | Shuffles, resizes, and pickles the input images |
-| 
+| <a href="#build_cnn_modelpy">build_cnn_model.py</a> | Preprocessing |  | Builds CNN models and evaluates performance |
 
 
 ## Pre-processing
