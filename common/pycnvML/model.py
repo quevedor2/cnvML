@@ -85,11 +85,11 @@ class CNN:
         model.add(Conv2D(filters=96, kernel_size=(11, 11), strides=(4,4), activation='relu',
                          padding='same', name='conv_1', input_shape=self.img_size))
         model.add(BatchNormalization())
-        model.add(MaxPool2D(pool_size=(3,3), strides=(2,2)))
+        model.add(MaxPooling2D(pool_size=(3,3), strides=(2,2)))
         model.add(Conv2D(filters=256, kernel_size=(5,5), strides=(1,1), activation='relu',
                          padding='same', name='conv_2'))
         model.add(BatchNormalization())
-        model.add(MaxPool2D(pool_size=(3,3), strides=(2,2)))
+        model.add(MaxPooling2D(pool_size=(3,3), strides=(2,2)))
         model.add(Conv2D(filters=384, kernel_size=(3,3), strides=(1,1), activation='relu',
                          padding='same', name='conv_3'))
         model.add(BatchNormalization())
