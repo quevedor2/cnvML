@@ -79,6 +79,51 @@ class CNN:
         
         self.model=model
     
+    def model_alexnet(self):
+        print("AlexNet-like model")
+        model = Sequential()
+        model.add(Conv2D(filters=96, kernel_size=(11, 11), strides=(4,4), activation='relu',
+                         padding='same', name='conv_1', input_shape=self.img_size))
+        model.add(BatchNormalization())
+        model.add(MaxPool2D(pool_size=(3,3), strides=(2,2)))
+        model.add(Conv2D(filters=256, kernel_size=(5,5), strides=(1,1), activation='relu',
+                         padding='same', name='conv_2'))
+        model.add(BatchNormalization())
+        model.add(MaxPool2D(pool_size=(3,3), strides=(2,2)))
+        model.add(Conv2D(filters=384, kernel_size=(3,3), strides=(1,1), activation='relu',
+                         padding='same', name='conv_3'))
+        model.add(BatchNormalization())
+        model.add(Conv2D(filters=384, kernel_size=(3,3), strides=(1,1), activation='relu',
+                         padding='same', name='conv_4'))
+        model.add(BatchNormalization())
+        model.add(Conv2D(filters=256, kernel_size=(3,3), strides=(1,1), activation='relu',
+                         padding='same', name='conv_5'))
+        model.add(MaxPooling2D((3, 3), strides=(2,2), name='maxpool_1'))
+        model.add(Flatten())
+        model.add(Dense(4096, activation='relu', name='dense_1'))
+        model.add(Dropout(rate=0.5))
+        model.add(Dense(512, activation='relu', name='transfer_1'))
+        model.add(Dropout(rate=0.5))
+        
+        if self.y_class == 'multi':
+            model.add(Dense(units=self.y.max()+1, activation='softmax', name='out'))
+            model.compile(loss='categorical_crossentropy',
+                          optimizer=Adam(learning_rate=self.lr),
+                          metrics=['accuracy'])
+        elif self.y_class == 'binary':
+            model.add(Dense(units=1, activation='sigmoid', name='out'))
+            model.compile(loss='binary_crossentropy',
+                          optimizer=Adam(learning_rate=self.lr),
+                          metrics=['accuracy'])
+        elif self.y_class == 'regression':
+            model.add(Dense(units=1, name='out'))
+            model.compile(loss='mean_squared_error',
+                          optimizer=Adam(learning_rate=self.lr))
+        else:
+            print("y_class must be either 'regression' or 'multi' or 'binary'")
+        
+        self.model=model
+    
     def transfer(self):
         print("Transfer learning at layer " + str(self.fine_tune_at))
         regression_model = Sequential()
@@ -127,8 +172,8 @@ def buildModel(y, IMG_SIZE, lr, model_type, x_train, y_train_one_hot,
             M.model_one()
         elif model_type=='model2':
             M.model_two()
-        elif model_type=='model3':
-            M.model_three()
+        elif model_type=='alexnet':
+            M.model_alexnet()
         elif model_type=='model4':
             M.model_four()
         else:
