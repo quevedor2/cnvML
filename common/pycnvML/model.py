@@ -1,7 +1,7 @@
 import os
 import tensorflow.keras
 from tensorflow.keras.models import Sequential, load_model
-from tensorflow.keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D
+from tensorflow.keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D, BatchNormalization
 from tensorflow.keras.optimizers import Adam
 from pycnvML import viz
 
