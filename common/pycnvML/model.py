@@ -161,7 +161,7 @@ class CNN:
             print("y_class must be either 'regression' or 'classification'")
 
 
-def buildModel(y, IMG_SIZE, lr, model_type, x_train, y_train_one_hot,
+def buildModel(y, IMG_SIZE, lr, model_type, x_train, y_train_one_hot, epochs,
                x_test, y_test_one_hot, outpath):
     ########################
     # Build/Train ConvNet #
@@ -179,7 +179,7 @@ def buildModel(y, IMG_SIZE, lr, model_type, x_train, y_train_one_hot,
         else:
             print("no model selected")
         
-        hist = M.model.fit(x_train, y_train_one_hot, batch_size=32, epochs=10, validation_split=0.2)
+        hist = M.model.fit(x_train, y_train_one_hot, batch_size=32, epochs=epochs, validation_split=0.2)
         M.model.evaluate(x_test, y_test_one_hot)[1]
         M.model.save(os.path.join(outpath, 'model_' + str(lr) + '.h5'))
         print("Model saved: " + os.path.join(outpath, 'model_' + str(lr) + '.h5'))

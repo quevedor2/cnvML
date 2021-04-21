@@ -37,22 +37,24 @@ def main(argv):
     CNTYPE='ASCN'   # TCN or ASCN
     model_type='model4'
     lr=0.0001
+	EPOCHS=10
     
     model_type=sys.argv[1]    # 'model4'
     lr=sys.argv[2]            # 0.0001
     SFC=sys.argv[3]           # sweep or hilbert
     CNTYPE=sys.argv[4]        # TCN or ASCN
     DATASET=sys.argv[5]       # TCGA or CCL
+	EPOCHS=sys.argv[6]       # TCGA or CCL
     
     try:
-        opts, args = getopt.getopt(argv,"hm:l:s:c:d:",["model=","lr=","sfc=","cntype=","dataset="])
+        opts, args = getopt.getopt(argv,"hm:l:s:c:d:e:",["model=","lr=","sfc=","cntype=","dataset=","epochs="])
     except getopt.GetoptError:
-        print('build_cnn_model.py -m <model> -l <lr> -s <sfc> -c <cntype> -d <dir>')
+        print('build_cnn_model.py -m <model> -l <lr> -s <sfc> -c <cntype> -d <dir> -e <epochs>')
         sys.exit(2)
     
     for opt, arg in opts:
         if opt == '-h':
-            print('build_cnn_model.py -m <model> -l <lr> -s <sfc> -c <cntype> -d <dir>')
+            print('build_cnn_model.py -m <model> -l <lr> -s <sfc> -c <cntype> -d <dir> -e <epochs>')
             sys.exit()
         elif opt in ("-m", "--model"):
             model_type = arg
@@ -64,6 +66,8 @@ def main(argv):
             CNTYPE = arg
         elif opt in ("-d", "--dataset"):
             DATASET = arg
+		elif opt in ("-e", "--epochs"):
+            EPOCHS = arg
     
     CATEGORIES = ["ACC", "BLCA", "BRCA", "CESC", "CHOL", "COAD",
         "DLBC", "ESCA", "GBM", "HNSC", "KICH", "KIRC",
@@ -77,8 +81,8 @@ def main(argv):
     (x_train, x_test, y_train_one_hot, y_test_one_hot) = load_data.balanceAndFormatData(X, y, Xids, CATEGORIES)
     
     model_path = os.path.join(OUTDIR, model_type)
-    M = model.buildModel(y, IMG_SIZE, lr, model_type, x_train, y_train_one_hot,
-    x_test, y_test_one_hot, model_path)
+    M = model.buildModel(y, IMG_SIZE, lr, model_type, x_train, y_train_one_hot, EPOCHS,
+    	x_test, y_test_one_hot, model_path)
     m_perf = anal.spotcheckModel(M, x_test, y_test_one_hot, CATEGORIES, model_path)
 
 
