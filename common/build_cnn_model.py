@@ -37,14 +37,14 @@ def main(argv):
     CNTYPE='ASCN'   # TCN or ASCN
     model_type='model4'
     lr=0.0001
-	EPOCHS=10
+    EPOCHS=10
     
     model_type=sys.argv[1]    # 'model4'
     lr=sys.argv[2]            # 0.0001
     SFC=sys.argv[3]           # sweep or hilbert
     CNTYPE=sys.argv[4]        # TCN or ASCN
     DATASET=sys.argv[5]       # TCGA or CCL
-	EPOCHS=sys.argv[6]       # TCGA or CCL
+    EPOCHS=sys.argv[6]       # TCGA or CCL
     
     try:
         opts, args = getopt.getopt(argv,"hm:l:s:c:d:e:",["model=","lr=","sfc=","cntype=","dataset=","epochs="])
@@ -66,8 +66,8 @@ def main(argv):
             CNTYPE = arg
         elif opt in ("-d", "--dataset"):
             DATASET = arg
-		elif opt in ("-e", "--epochs"):
-            EPOCHS = arg
+        elif opt in ("-e", "--epochs"):
+            EPOCHS = int(arg)
     
     CATEGORIES = ["ACC", "BLCA", "BRCA", "CESC", "CHOL", "COAD",
         "DLBC", "ESCA", "GBM", "HNSC", "KICH", "KIRC",
