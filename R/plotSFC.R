@@ -141,9 +141,9 @@ for(seg_i in seg_files){
       png(file.path(PDIR, analysis, "output", sfc, cntype, paste0(sample_id, ".png")), 
           width=300, height=300)
       hc_obj <- setupRefHcMatrix(order = order, scale=scale)
-      if(sfc == 'sweep'){
-        if(verbose) print("Using a Sweep SFC")
-        bins <- mapSFC(sfc='sweep', hc_ord=hc_obj$ord, uids=uids)
+      if(sfc != 'sweep'){
+        if(verbose) print(paste0("Using a ", sfc, " SFC"))
+        bins <- mapSFC(sfc=sfc, hc_ord=hc_obj$ord, uids=uids)
         hc_obj$hc@POS <- bins[-nrow(bins),c('x1', 'y1', 'x2', 'y2')]
         uids <- bins$uid
       }
