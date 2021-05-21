@@ -29,6 +29,7 @@ usethis::use_package("abind")
 usethis::use_package("BiocGenerics")
 usethis::use_package("grDevices")
 usethis::use_package("IRanges")
+usethis::use_package("morton")
 
 
 #### Building ####

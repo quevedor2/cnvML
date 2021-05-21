@@ -75,6 +75,7 @@ ds_pvals <- lapply(c("GDSC", "CCLE", "GNE"), function(ds){
   
   pvals <- apply(f1, 1, function(j){ 
       round(t.test(f1['transfer',],j, alternative='greater')$p.val, 4)
+      #round(t.test(f1['transfer',],j, alternative='greater')$estimate,3)
   })
   return(pvals)
 })

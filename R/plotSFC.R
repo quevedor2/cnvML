@@ -2,8 +2,16 @@
 ## style plots using an input seg file. 
 #
 # Usage:
+## Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc scan --dataset ccl_aggregate
+## Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc scan --dataset TCGA
 ## Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc sweep --dataset ccl_aggregate
 ## Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc sweep --dataset TCGA
+## Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc morton --dataset ccl_aggregate
+## Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc morton --dataset TCGA
+## Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc diagonal --dataset ccl_aggregate
+## Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc diagonal --dataset TCGA
+## Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc random --dataset ccl_aggregate
+## Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc random --dataset TCGA
 ## Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc hilbert --dataset ccl_aggregate
 ## Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc hilbert --dataset TCGA
 ## Rscript plotSFC.R --cntype 'TCN' --order 8 --maxcn 8 --sfc hilbert --dataset ccl_aggregate
@@ -23,7 +31,7 @@ option_list <- list(
   make_option(c("-m", "--maxcn"), type="integer", default=5,
               help="Max CN to plot to [%default]"),
   make_option(c("-s", "--sfc"), type="character", default='hilbert',
-              help="Space-filling curve to use, 'sweep' or 'hilbert' [%default]"),
+              help="Space-filling curve to use: hilbert, morton, sweep, scan, diagonal, random [%default]"),
   make_option(c("-d", "--dataset"), type="character", default='ccl_aggregate',
               help="Dataset to use, 'ccl_aggregate' or 'TCGA' [%default]"),
   make_option(c("-v", "--verbose"), action="store_false", default=FALSE,
@@ -49,15 +57,15 @@ a_col=c("black", "red")           # Range of color for the A-allele (or TCN)
 b_col=c("black", "blue")          # Range of color for the B-allele
 breaks <- seq(0, opt$maxcn, by=0.1) # Where to add the breaks for Chr Integer CN (Increase for TCN)
 add_1000g <- TRUE                 # Adds 1000G data to the TCGA seg file
-sfc <- opt$sfc                    # whether to use a hilbert SFC or sweep
+sfc <- opt$sfc                    # whether to use a SFC: hilbert, morton, sweep, scan, diagonal or random
 verbose <- FALSE                  # Verbose, TRUE or FALSE
 cntype <- opt$cntype              # Plot ASCN or TCN as colours
 
 # Asserts
 assert_that(length(cntype)==1, any(c('TCN', 'ASCN') %in% cntype), 
             msg='--cntype must be either "TCN" or"ASCN"')
-assert_that(length(sfc)==1, any(c('sweep', 'hilbert') %in% sfc), 
-            msg='--sfc must be either "sweep" or "hilbert"')
+assert_that(length(sfc)==1, any(c('hilbert', 'morton', 'sweep', 'scan', 'diagonal', 'random') %in% sfc), 
+            msg='--sfc must be either hilbert, morton, sweep, scan, diagonal, or random')
 assert_that(length(analysis)==1, any(c('ccl_aggregate', 'TCGA') %in% analysis), 
             msg='--dataset must be either "ccl_aggregate" or "TCGA"')
 assert_that(is.integer(order), length(order)==1, order>3,

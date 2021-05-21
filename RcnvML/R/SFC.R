@@ -155,15 +155,19 @@ mapSFC <- function(sfc='sweep', hc_ord=NULL, order=NULL, uids=NULL){
                                  all(grepl("[0-9]*_[0-9]*", uids)),
                                  msg="'uids' is malformed")
   
-  if(grepl('^sweep$', sfc, ignore.case = T)){
+  if(!grepl('^hilbert$', sfc, ignore.case = T)){
     bins <- hc_ord
     bins <- bins[order(bins$gord),]
     
-    # Create the Sweep order
+    # map SFCs if no custom order is given
     if(is.null(uids)){
-      uids <- apply(expand.grid(c(0:maxn), 
-                                c(0:maxn)), 
-                    1, paste, collapse="_")
+      uids <- switch(sfc,
+                     'random'=.sfc_random(maxn),
+                     'sweep'=.sfc_sweep(maxn),
+                     'scan'=.sfc_scan(maxn),
+                     'diagonal'=.sfc_diagonal(maxn),
+                     'morton'=.sfc_morton(maxn),
+                     stop("'sfc' must be either random, sweep, scan, diagonal, or morton"))
     }
     bins$uid <- uids 
     bins$x1 <- as.integer(gsub("_.*", "", uids))

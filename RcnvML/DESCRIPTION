@@ -28,7 +28,8 @@ Imports:
     BiocGenerics,
     S4Vectors,
     IRanges,
-    HilbertVis
+    HilbertVis,
+    morton
 Suggests:
     knitr
 RoxygenNote: 7.0.0
