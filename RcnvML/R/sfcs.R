@@ -56,9 +56,9 @@
   
   compute_xy <- function(maxx, maxn, minx, dir='horizontal'){
     x <- minx
-    while(minx < (maxn-1)){
+    while(minx < (maxn)){
       # left transition
-      if(maxx < (maxn-1)) {
+      if(maxx < (maxn)) {
         maxx <- maxx+1
       } else {
         minx <- minx + 1
@@ -70,7 +70,7 @@
                   vertical=c(x, c(maxx:minx)))
       
       # right transition
-      if(maxx < (maxn-1)){
+      if(maxx < (maxn)){
         maxx <- maxx+1
       } else {
         minx <- minx + 1
@@ -99,13 +99,12 @@
 #    1    2    5    6
 #' @import morton
 .sfc_morton <- function(maxn){
-  grd <- fromMorton(c(0:(maxn^2-1)))
+  grd <- fromMorton(c(0:((maxn+1)^2 - 1)))
   grd <- do.call(cbind, grd)
   uids <- apply(grd, 
                 1, paste, collapse="_")
   return(uids)
 }
-
 
 # Visualize the space-filling curves in text format
 # Used to generate the comments for the sfc functions
@@ -121,13 +120,23 @@
 }
 
 
-# n <- 4
+
+
+# sapply(c(2:8), function(n){
+#   c("diagonal"=length(.sfc_diagonal(n)),
+#     "scan"=length(.sfc_scan(n)),
+#     "sweep"=length(.sfc_sweep(n)),
+#     "random"=length(.sfc_random(n)),
+#     "morton"=length(.sfc_morton(n)))
+# })
+
+# n <- 3
 # .viz_mat(.sfc_scan(n))
 # .viz_mat(.sfc_random(n))
 # .viz_mat(.sfc_sweep(n))
 # .viz_mat(.sfc_morton(n))
 # .viz_mat(.sfc_diagonal(n))
-# 
+
 # lv =4 
 # pos <- t(sapply(0:(4^lv - 1), HilbertVis::hilbertCurvePoint, lv))
 # colnames(pos) <- c('x', 'y')
