@@ -178,3 +178,31 @@ mapSFC <- function(sfc='sweep', hc_ord=NULL, order=NULL, uids=NULL){
   
   return('hc_ord'=bins)
 }
+
+
+
+#' Split bins based on square overlap
+#' @description Return the coordinates of a square that 
+#' overlaps the 2d representation
+#' 
+#' @param xleft integer position of xleft
+#' @param xright integer position of 
+#' @param ytop integer position of 
+#' @param ybottom integer position of 
+#' @param bins ordered dataframe from setupRefHcMatrix(order=ord)
+#'
+#' @return
+#' 2 element list
+#'   `TRUE`:  section of the dataframe that overlaps the input square
+#'   `FALSE`: section of the dataframe that does not overlap the input square
+#' @export
+splSquareFromBins <- function(xleft, xright, ytop, ybottom, bins){
+  grd <- expand.grid(c((xleft-1):(xright-1)),
+                     c((ytop-1):(ybottom-1)))
+  bins_pst  <- apply(bins[,c('x1', 'y1')], 1, paste, collapse=",")
+  grd_pst   <- apply(grd, 1, paste, collapse=",")
+  m_idx     <- (bins_pst %in% grd_pst)
+  bin_spl   <- split(bins, m_idx)
+  
+  return(bin_spl)
+}

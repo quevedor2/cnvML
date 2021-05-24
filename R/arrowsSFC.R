@@ -26,13 +26,27 @@ sapply(c(4,6,8), function(ord){
   na <- lapply(c('sweep', 'scan', 'diagonal', 'morton', 'random'), function(sfc){
     bins <- mapSFC(sfc=sfc, hc_ord=gbin_pos$ord)
     
+    maxn <- sqrt(nrow(bins))
+    
+    
+    
     pdf(file.path("arrows", paste0(sfc, "_", ord, ".pdf")))
     hc <- genHC(max(chr.size.dat$cum.end)/scale, ord, mode='normal',
                 sfc_pos=bins[-nrow(bins),c('x1', 'y1', 'x2', 'y2')])
     dev.off()
   })
   
-  
+  seqinfo <- tryCatch({
+    seqlevelsStyle(seqinfo) <- genomeStyle
+    seqinfo
+  }, error=function(e){
+    if(genomeStyle =='NCBI'){
+      seqnames(seqinfo) <- gsub("^chr", "", seqnames(seqinfo), ignore.case=TRUE)
+      seqnames(seqinfo) <- gsub("^M$", "chrM", seqnames(seqinfo), ignore.case=TRUE)
+      genome(seqinfo) <- 'GRCh37.p13'
+    }
+    seqinfo
+  })
   
   pdf(file.path("arrows", paste0("hilbert_", ord, ".pdf")))
   hc <- genHC(max(chr.size.dat$cum.end)/scale, ord, mode='normal')

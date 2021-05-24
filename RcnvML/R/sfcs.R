@@ -4,9 +4,9 @@
 #   5   6   7   8
 #   1   2   3   4
 .sfc_sweep <- function(maxn){
-  uids <- apply(expand.grid(c(0:maxn), 
-                            c(0:maxn)), 
-                1, paste, collapse="_")
+  grd <- expand.grid(c(0:maxn), 
+                     c(0:maxn))
+  uids <- apply(grd, 1, paste, collapse="_")
   return(uids)
 }
 
