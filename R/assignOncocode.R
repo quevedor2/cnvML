@@ -41,7 +41,7 @@ cntype <- opt$cntype      # Plot ASCN or TCN as colours
 # Asserts
 assert_that(length(cntype)==1, any(c('TCN', 'ASCN') %in% cntype), 
             msg='--cntype must be either "TCN" or"ASCN"')
-assert_that(length(sfc)==1, any(c('sweep', 'hilbert') %in% sfc), 
+assert_that(length(sfc)==1, any(c('sweep', 'hilbert', 'sweep', 'scan', 'random', 'morton') %in% sfc), 
             msg='--sfc must be either "sweep, scan, diagonal, random, morton, hilbert"')
 assert_that(length(analysis)==1, any(c('ccl_aggregate', 'TCGA') %in% analysis), 
             msg='--dataset must be either "ccl_aggregate" or "TCGA"')
