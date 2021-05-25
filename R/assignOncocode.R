@@ -21,7 +21,7 @@ option_list <- list(
               default='/mnt/work1/users/pughlab/projects/cancer_cell_lines',
               help="Path to seg files [dir]/[dataset]/input/[seg_file] [%default]"),
   make_option(c("-s", "--sfc"), type="character", default='hilbert',
-              help="Space-filling curve to use, 'sweep' or 'hilbert' [%default]"),
+              help="Space-filling curve to use, 'sweep, scan, diagonal, random, morton, hilbert' [%default]"),
   make_option(c("-d", "--dataset"), type="character", default='ccl_aggregate',
               help="Dataset to use, 'ccl_aggregate' or 'TCGA' [%default]"),
   make_option(c("-v", "--verbose"), action="store_false", default=FALSE,
@@ -42,7 +42,7 @@ cntype <- opt$cntype      # Plot ASCN or TCN as colours
 assert_that(length(cntype)==1, any(c('TCN', 'ASCN') %in% cntype), 
             msg='--cntype must be either "TCN" or"ASCN"')
 assert_that(length(sfc)==1, any(c('sweep', 'hilbert') %in% sfc), 
-            msg='--sfc must be either "sweep" or "hilbert"')
+            msg='--sfc must be either "sweep, scan, diagonal, random, morton, hilbert"')
 assert_that(length(analysis)==1, any(c('ccl_aggregate', 'TCGA') %in% analysis), 
             msg='--dataset must be either "ccl_aggregate" or "TCGA"')
 

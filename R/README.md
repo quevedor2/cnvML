@@ -5,8 +5,9 @@
 |------|------|------|------|
 | <a href="#plotsfcr">plotSFC.R</a> | Preprocessing |  | Plots Hilbert/Sweep ASCN and TCN SFC |
 | <a href="#assignoncocoder">assignOncocode.R</a> | Preprocessing |  | Moves SFC pngs to oncocode directory structure |
-|  <a href="#arrowssfcr">arrowsSFC.R</a> | Supplementary Figure | Fig S1 | Mapping of SFC |
-| <a href="#comparesfcr">compareSFC.R</a> | Supplementary Figure | Fig S2 | Sweep vs Hilbert SFC |
+| <a href="#arrowssfcr">arrowsSFC.R</a> | Supplementary Figure | Fig S1 | Mapping of SFC |
+| <a href="#comparesfcr">fillsSFC.R</a> | Supplementary Figure | Fig S2 | 2D to 1D SFCs |
+| <a href="#comparesfcr">compareSFC.R</a> | Supplementary Figure | Fig S3 | Sweep vs Hilbert SFC |
 
 ## Pre-processing
 ### plotSFC.R
@@ -53,12 +54,17 @@ Options:
 
 ## Supplementary Figures
 ### arrowsSFC.R 
-This piece of code is used to generate **Supplementary Figure 1: Mapping of Hilbert and Sweep space filling curves**.
+This piece of code is used to generate **Supplementary Figure 1: Mapping of space filling curves**.
 
-Using a 4th and 6th orders/level, it repurposes the `HilbertCurve::HilbertCurve()` function to generate a directional graph of either a HilbertCurve or a SweepCurve. This adapted function allows for the input of a different positional space (@POS), which allows for a Sweep Curve to be used. If no `sfc_pos` positional space is given, it defaults to the innate Hilbert Curve space.
+Using a 4th and 6th orders/level, it repurposes the `HilbertCurve::HilbertCurve()` function to generate a directional graph of either a HilbertCurve, a sweep, scan, random, diagonal or Morton SFC vurve. This adapted function allows for the input of a different positional space (@POS), which allows for the various SFC curves to be used. If no `sfc_pos` positional space is given, it defaults to the innate Hilbert Curve space.
+
+### fillsSFC.R 
+This piece of code is used to generate **Supplementary Figure 2: Mapping the 2D to 1D relation of space filling curves**.
+
+Using a 6th orders/level, it repurposes the `HilbertCurve::HilbertCurve()` function to generate the various SFC curves. Then, by simulating a blocked out region in the 2D space, it will represent the corresponding 1D regions that is reflected by that blocked out region for three conditions: A row block, a column black, and a square block.
 
 ### compareSFC.R 
-This piece of code is used to generate **Supplementary Figure 2: Comparison between Hilbert and Sweep space filling curves**.
+This piece of code is used to generate **Supplementary Figure 3: Comparison between Hilbert and Sweep space filling curves**.
 
 Using several different orders/levels (4, 6, 8), it will generate a Hilbert and Sweep space-filling curve using the standard hg19 genome, colored by chromosomes. It will then run a Euclidean distance between adjacent regions in the 2D space for both SFC.
 

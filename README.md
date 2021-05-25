@@ -35,17 +35,35 @@ The R script [plotSFC.R](https://github.com/quevedor2/cnvML/blob/master/R/plotSF
 
 The following commands were used to create the SFC images
 ```sh
-# ASCN plots using a Sweep SFC
-Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc sweep --dataset ccl_aggregate
-Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc sweep --dataset TCGA
-
-# ASCN plots using a Hilbert SFC
-Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc hilbert --dataset ccl_aggregate
-Rscript plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc hilbert --dataset TCGA
-
-# TCN plots using a Hilbert SFC
-Rscript plotSFC.R --cntype 'TCN' --order 8 --maxcn 8 --sfc hilbert --dataset ccl_aggregate
-Rscript plotSFC.R --cntype 'TCN' --order 8 --maxcn 8 --sfc hilbert --dataset TCGA
+if [ "$1" = "scan" ]; then
+  echo "SFC: Scan"
+  Rscript ${PDIR}/plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc scan --dataset ccl_aggregate
+  Rscript ${PDIR}/plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc scan --dataset TCGA
+elif [ "$1" = "sweep" ]; then
+  echo "SFC: Sweep"
+  Rscript ${PDIR}/plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc sweep --dataset ccl_aggregate
+  Rscript ${PDIR}/plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc sweep --dataset TCGA
+elif [ "$1" = "morton" ]; then
+  echo "SFC: Morton"
+  Rscript ${PDIR}/plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc morton --dataset ccl_aggregate
+  Rscript ${PDIR}/plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc morton --dataset TCGA
+elif [ "$1" = "diagonal" ]; then
+  echo "SFC: Diagonal"
+  Rscript ${PDIR}/plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc diagonal --dataset ccl_aggregate
+  Rscript ${PDIR}/plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc diagonal --dataset TCGA
+elif [ "$1" = "random" ]; then
+  echo "SFC: Random"
+  Rscript ${PDIR}/plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc random --dataset ccl_aggregate
+  Rscript ${PDIR}/plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc random --dataset TCGA
+elif [ "$1" = "hilbert" ]; then
+  echo "SFC: Hilbert-ASCN"
+  Rscript ${PDIR}/plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc hilbert --dataset ccl_aggregate
+  Rscript ${PDIR}/plotSFC.R --cntype 'ASCN' --order 8 --maxcn 5 --sfc hilbert --dataset TCGA
+elif [ "$1" = "tcn" ]; then
+  echo "SFC: Hilbert-TCN"
+  Rscript ${PDIR}/plotSFC.R --cntype 'TCN' --order 8 --maxcn 8 --sfc hilbert --dataset ccl_aggregate
+  Rscript ${PDIR}/plotSFC.R --cntype 'TCN' --order 8 --maxcn 8 --sfc hilbert --dataset TCGA
+fi
 ```
 
 ## Mapping features to cancer type
