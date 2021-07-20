@@ -100,7 +100,7 @@ def main(argv):
             args.EPOCHS, x_test, y_test_one_hot, model_path)
     elif args.ANALYSIS=='transfer':
         M = model.transferModel(y, IMG_SIZE, args.lr, x_train, y_train_one_hot, args.EPOCHS,
-            x_test, y_test_one_hot, tcga_model_path, ccl_model_path, layer=9, CATEGORIES=CATEGORIES)
+            x_test, y_test_one_hot, tcga_model_path, ccl_model_path, CATEGORIES, layer=9)
     
     m_perf = anal.spotcheckModel(M, x_test, y_test_one_hot, CATEGORIES, model_path)
 

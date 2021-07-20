@@ -191,7 +191,7 @@ def buildModel(y, IMG_SIZE, lr, model_type, x_train, y_train_one_hot, epochs,
     return M
 
 def transferModel(y, IMG_SIZE, lr, x_train, y_train_one_hot, epochs,
-                  x_test, y_test_one_hot, modeldir, outpath, layer=9, CATEGORIES):
+                  x_test, y_test_one_hot, modeldir, outpath, CATEGORIES, layer=9):
     ############################
     # Transfer & Train ConvNet #
     ############################
