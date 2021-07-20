@@ -1,5 +1,6 @@
 import os
 import tensorflow.keras
+import numpy as np
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D, BatchNormalization
 from tensorflow.keras.optimizers import Adam
