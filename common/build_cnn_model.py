@@ -24,50 +24,46 @@ EXAMPLES:
 '''
 
 
-import os, sys, getopt
+import os, sys, getopt, argparse
 from pycnvML import load_data, model, anal
 #from pyimagesearch.gradcam import GradCAM
 #from occlusioncnn.occlusion import Occlusion
 
 def main(argv):
     PDIR='/cluster/projects/pughlab/projects/cancer_cell_lines'
+    CCLDIR=Path(os.path.join(PDIR, 'CCL'))
+    CCL_DATADIR=os.path.join(CCLDIR, "data")
+    CCL_OUTDIR=os.path.join(CCLDIR, "models")
+    CCL_dataset='GDSC'
+    
     IMG_SIZE=300
     
-    SFC='sweep'     # sweep or hilbert
-    CNTYPE='ASCN'   # TCN or ASCN
-    model_type='model4'
-    lr=0.0001
-    EPOCHS=10
-    
-    model_type=sys.argv[1]    # 'model4'
-    lr=sys.argv[2]            # 0.0001
-    SFC=sys.argv[3]           # sweep or hilbert
-    CNTYPE=sys.argv[4]        # TCN or ASCN
-    DATASET=sys.argv[5]       # TCGA or CCL
-    EPOCHS=sys.argv[6]       # TCGA or CCL
-    
-    try:
-        opts, args = getopt.getopt(argv,"hm:l:s:c:d:e:",["model=","lr=","sfc=","cntype=","dataset=","epochs="])
-    except getopt.GetoptError:
-        print('build_cnn_model.py -m <model> -l <lr> -s <sfc> -c <cntype> -d <dir> -e <epochs>')
-        sys.exit(2)
-    
-    for opt, arg in opts:
-        if opt == '-h':
-            print('build_cnn_model.py -m <model> -l <lr> -s <sfc> -c <cntype> -d <dir> -e <epochs>')
-            sys.exit()
-        elif opt in ("-m", "--model"):
-            model_type = arg
-        elif opt in ("-l", "--lr"):
-            lr = arg
-        elif opt in ("-s", "--sfc"):
-            SFC = arg
-        elif opt in ("-c", "--cntype"):
-            CNTYPE = arg
-        elif opt in ("-d", "--dataset"):
-            DATASET = arg
-        elif opt in ("-e", "--epochs"):
-            EPOCHS = int(arg)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-m', '--model', dest="model_type",
+                    required=False, type=str,
+                    metavar="<model>", help="name of the model architecture to use: alexnet or model4")
+    parser.add_argument('-l', '--lr', dest="lr",
+                    required=False, type=float, default=0.0001,
+                    metavar="<lr>", help="Learning rate")
+    parser.add_argument('-s', '--sfc', dest="SFC",
+                    required=False, type=str, default='hilbert',
+                    metavar="<sfc>", help="Space-filling curve (hilbert, morton, random, sweep, scan, diagonal)")
+    parser.add_argument('-c', '--cntype', dest="CNTYPE",
+                    required=False, type=str, default='ASCN',
+                    metavar="<cntype>", help="ASCN or TCN")
+    parser.add_argument('-d', '--dataset', dest="DATASET",
+                    required=False, type=str, default='TCGA',
+                    metavar="<dataset>", help="Either TCGA or CCL")
+    parser.add_argument('-e', '--epochs', dest="EPOCHS",
+                    required=False, type=int, default=70,
+                    metavar="<epochs>", help="Number of epochs to run for training")
+    parser.add_argument('-a', '--analysis', dest="ANALYSIS",
+                    required=False, type=str, default='naive',
+                    metavar="<analysis>", help="Whether to run a 'naive' training or 'transfer' from an existing model")
+    parser.add_argument('-p', '--cclds', dest="CCL_DATASET",
+                    required=False, type=str, default='',
+                    metavar="<ccl_dataset>", help="What CCL dataset to use: GDCS, CCLE or GNE")
+    args = parser.parse_args()
     
     CATEGORIES = ["ACC", "BLCA", "BRCA", "CESC", "CHOL", "COAD",
         "DLBC", "ESCA", "GBM", "HNSC", "KICH", "KIRC",
@@ -76,13 +72,20 @@ def main(argv):
         "SARC", "SKCM", "STAD", "TGCT", "THCA", "THYM",
         "UCEC", "UCS", "UVM", "Normal"]
     
-    (X, Xids, y, DATADIR, OUTDIR) = load_data.readPickle(PDIR, DATASET, SFC, CNTYPE, CATEGORIES, IMG_SIZE=IMG_SIZE)
     
+    (X, Xids, y, DATADIR, OUTDIR) = load_data.readPickle(args.PDIR, args.DATASET, args.SFC,
+        args.CNTYPE, CATEGORIES, IMG_SIZE=IMG_SIZE, CCL_DATASET=args.CCL_DATASET)
     (x_train, x_test, y_train_one_hot, y_test_one_hot) = load_data.balanceAndFormatData(X, y, Xids, CATEGORIES)
     
-    model_path = os.path.join(OUTDIR, model_type)
-    M = model.buildModel(y, IMG_SIZE, lr, model_type, x_train, y_train_one_hot, EPOCHS,
-    	x_test, y_test_one_hot, model_path)
+    
+    if args.ANALYSIS=='naive':
+        pass
+    elif args.ANALYSIS=='transfer':
+        
+    
+    model_path = os.path.join(OUTDIR, args.model_type)
+    M = model.buildModel(y, IMG_SIZE, args.lr, args.model_type, x_train, y_train_one_hot,
+        args.EPOCHS, x_test, y_test_one_hot, model_path)
     m_perf = anal.spotcheckModel(M, x_test, y_test_one_hot, CATEGORIES, model_path)
 
 

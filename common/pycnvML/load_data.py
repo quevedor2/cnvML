@@ -7,9 +7,13 @@ from pycnvML.anal import *
 
 
 
-def readPickle(PDIR, DATASET, SFC, CNTYPE, CATEGORIES, IMG_SIZE=300):
-    DATADIR = os.path.join(PDIR, DATASET, "data", SFC, CNTYPE)
-    OUTDIR = os.path.join(PDIR, DATASET, "models", SFC, CNTYPE)
+def readPickle(PDIR, DATASET, SFC, CNTYPE, CATEGORIES, IMG_SIZE=300, CCL_DATASET=''):
+    DATADIR = os.path.join(PDIR, DATASET, "data", SFC, CNTYPE, CCL_DATASET)
+    OUTDIR = os.path.join(PDIR, DATASET, "models", SFC, CNTYPE, CCL_DATASET)
+    try:
+        os.makedirs(OUTDIR)
+    except OSError as error:
+        print(error)
     IMG_SIZE=IMG_SIZE
     
     # Load data from TCGA Hilberts
