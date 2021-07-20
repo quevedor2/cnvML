@@ -25,7 +25,6 @@ EXAMPLES:
 
 
 import os, sys, getopt, argparse
-from itertools import compress
 from pathlib import Path
 from pycnvML import load_data, model, anal
 #from pyimagesearch.gradcam import GradCAM
