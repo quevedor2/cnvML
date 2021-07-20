@@ -38,7 +38,7 @@ def main(argv):
                     required=False, type=str,
                     metavar="<model>", help="name of the model architecture to use: alexnet or model4")
     parser.add_argument('-l', '--lr', dest="lr",
-                    required=False, type=float, default=0.0001,
+                    required=False, type=str, default="0.0001",
                     metavar="<lr>", help="Learning rate")
     parser.add_argument('-s', '--sfc', dest="SFC",
                     required=False, type=str, default='hilbert',
