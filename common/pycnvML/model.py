@@ -189,3 +189,29 @@ def buildModel(y, IMG_SIZE, lr, model_type, x_train, y_train_one_hot, epochs,
         print("Loading existing model...")
         M = load_model(os.path.join(outpath, 'model_' + str(lr) + '.h5'))
     return M
+
+def transferModel(y, IMG_SIZE, lr, x_train, y_train_one_hot, epochs,
+                  x_test, y_test_one_hot, modeldir, outpath, layer=9):
+    ############################
+    # Transfer & Train ConvNet #
+    ############################
+    if not os.path.exists(os.path.join(outpath, 'transfer_model_' + str(lr) + '.h5')):
+        # Load existing model
+        M = load_model(os.path.join(modeldir, 'model_' + str(lr) + '.h5'))
+        # M = load_model(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2.h5'))
+        
+        # Transfer the model and retrain last layers
+        Mtransfer = CNN(model=M, fine_tune_at=layer, lr=float(lr))
+        Mtransfer.transfer()
+        
+        # Evaluate model performance and save
+        hist = Mtransfer.model.fit(x_train, y_train_one_hot, batch_size=32, epochs=epochs, validation_split=0.2)
+        Mtransfer.model.evaluate(x_test, y_test_one_hot)[1]
+        Mtransfer.model.save(os.path.join(outpath, 'transfer_model_' + str(lr) + '.h5'))
+        print("Model saved: " + os.path.join(outpath, 'transfer_model_' + str(lr) + '.h5'))
+        viz.plot_loss_accuracy(hist, os.path.join(outpath, "cnn_performance.png"))
+        M=Mtransfer.model
+    else:
+        print("Loading existing model...")
+        M = load_model(os.path.join(outpath, 'transfer_model_' + str(lr) + '.h5'))
+    return M

@@ -10,8 +10,12 @@ from pycnvML.anal import *
 def readPickle(PDIR, DATASET, SFC, CNTYPE, CATEGORIES, IMG_SIZE=300, CCL_DATASET=''):
     DATADIR = os.path.join(PDIR, DATASET, "data", SFC, CNTYPE, CCL_DATASET)
     OUTDIR = os.path.join(PDIR, DATASET, "models", SFC, CNTYPE, CCL_DATASET)
+    TCGADIR = os.path.join(PDIR, 'TCGA', "models", SFC, CNTYPE, CCL_DATASET)
+    CCLDIR = os.path.join(PDIR, 'CCL', "models", SFC, CNTYPE, CCL_DATASET)
+    
     try:
-        os.makedirs(OUTDIR)
+        os.makedirs(TCGADIR)
+        os.makedirs(CCLDIR)
     except OSError as error:
         print(error)
     IMG_SIZE=IMG_SIZE
@@ -24,7 +28,7 @@ def readPickle(PDIR, DATASET, SFC, CNTYPE, CATEGORIES, IMG_SIZE=300, CCL_DATASET
     Xids = pickle.load(pickle_Xids)
     y = pickle.load(pickle_y)
     
-    return(X, Xids, y, DATADIR, OUTDIR)
+    return(X, Xids, y, DATADIR, TCGADIR, CCLDIR, OUTDIR)
 
 def balanceAndFormatData(X, y, Xids, CATEGORIES):
     X,y,Xids = balanceGrp(X, y, Xids, q=0.5)

@@ -73,19 +73,24 @@ def main(argv):
         "UCEC", "UCS", "UVM", "Normal"]
     
     
-    (X, Xids, y, DATADIR, OUTDIR) = load_data.readPickle(args.PDIR, args.DATASET, args.SFC,
+    (X, Xids, y, DATADIR, TCGADIR, CCLDIR) = load_data.readPickle(args.PDIR, args.DATASET, args.SFC,
         args.CNTYPE, CATEGORIES, IMG_SIZE=IMG_SIZE, CCL_DATASET=args.CCL_DATASET)
     (x_train, x_test, y_train_one_hot, y_test_one_hot) = load_data.balanceAndFormatData(X, y, Xids, CATEGORIES)
     
     
-    if args.ANALYSIS=='naive':
-        pass
-    elif args.ANALYSIS=='transfer':
-        
-    
+    # OUTDIR = os.path.join(PDIR, DATASET, "models", SFC, CNTYPE, CCL_DATASET)
+    # OUTDIR = os.path.join("/cluster/projects/pughlab/projects/cancer_cell_lines",
+    #    "CCL", "models", "hilbert", "ASCN", "GDSC")
     model_path = os.path.join(OUTDIR, args.model_type)
-    M = model.buildModel(y, IMG_SIZE, args.lr, args.model_type, x_train, y_train_one_hot,
-        args.EPOCHS, x_test, y_test_one_hot, model_path)
+    tcga_model_path = os.path.join(TCGADIR, args.model_type)
+    ccl_model_path = os.path.join(CCLDIR, args.model_type)
+    if args.ANALYSIS=='naive':
+        M = model.buildModel(y, IMG_SIZE, args.lr, args.model_type, x_train, y_train_one_hot,
+            args.EPOCHS, x_test, y_test_one_hot, model_path)
+    elif args.ANALYSIS=='transfer':
+        M = model.transferModel(y, IMG_SIZE, args.lr, x_train, y_train_one_hot, args.EPOCHS,
+            x_test, y_test_one_hot, model_path, ccl_model_path, layers=9)
+    
     m_perf = anal.spotcheckModel(M, x_test, y_test_one_hot, CATEGORIES, model_path)
 
 
