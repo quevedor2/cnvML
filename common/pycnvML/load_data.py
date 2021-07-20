@@ -5,8 +5,6 @@ import tensorflow.keras
 
 from pycnvML.anal import *
 
-
-
 def readPickle(PDIR, DATASET, SFC, CNTYPE, CATEGORIES, IMG_SIZE=300, CCL_DATASET=''):
     DATADIR = os.path.join(PDIR, DATASET, "data", SFC, CNTYPE, CCL_DATASET)
     OUTDIR = os.path.join(PDIR, DATASET, "models", SFC, CNTYPE, CCL_DATASET)
@@ -53,3 +51,21 @@ def balanceAndFormatData(X, y, Xids, CATEGORIES):
     x_test = x_test / 255
     
     return(x_train, x_test, y_train_one_hot, y_test_one_hot)
+
+def matchCategories(ccl_dir, X, Xids, y, CATEGORIES):
+    ccl_CAT=[]
+    for o in os.listdir(ccl_dir):
+        if os.path.isdir(os.path.join(ccl_dir, o)):
+            ccl_CAT.append(o)
+    
+    # Find overlaps between CATEGORIES and the listed categories in ccl_dir
+    ccl_y_verbose = [ccl_CAT[int(i)] for i in y]
+    ccl_tcga_ov = [elem in CATEGORIES for elem in ccl_y_verbose]
+    
+    # Reduce to overlapping categories
+    X = X[ccl_tcga_ov,:]
+    Xids = Xids.loc[ccl_tcga_ov,:]
+    yT = list(compress(ccl_y_verbose, ccl_tcga_ov))
+    y = [ CATEGORIES.index(x) for x in yT ]
+    y = np.c_[y]
+    return(X, Xids, y, ccl_tcga_ov)

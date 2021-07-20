@@ -25,6 +25,7 @@ EXAMPLES:
 
 
 import os, sys, getopt, argparse
+from itertools import compress
 from pathlib import Path
 from pycnvML import load_data, model, anal
 #from pyimagesearch.gradcam import GradCAM
@@ -66,10 +67,10 @@ def main(argv):
     #args.CCL_DATASET='GDSC'
     #args.ANALYSIS='transfer'
     #args.DATASET='CCL'
-    #CCLDIR=Path(os.path.join(args.PDIR, 'CCL'))
-    #CCL_DATADIR=os.path.join(CCLDIR, "data")
-    #CCL_OUTDIR=os.path.join(CCLDIR, "models")
-    #CCL_dataset='GDSC'
+    
+    #args.CCL_DATASET=''
+    #args.ANALYSIS='naive'
+    #args.DATASET='TCGA'
     
     CATEGORIES = ["ACC", "BLCA", "BRCA", "CESC", "CHOL", "COAD",
         "DLBC", "ESCA", "GBM", "HNSC", "KICH", "KIRC",
@@ -77,10 +78,14 @@ def main(argv):
         "MESO", "OV", "PAAD", "PCPG", "PRAD", "READ",
         "SARC", "SKCM", "STAD", "TGCT", "THCA", "THYM",
         "UCEC", "UCS", "UVM", "Normal"]
-    
-    
-    (X, Xids, y, DATADIR, TCGADIR, CCLDIR) = load_data.readPickle(args.PDIR, args.DATASET, args.SFC,
+
+
+    (X, Xids, y, DATADIR, TCGADIR, CCLDIR, OUTDIR) = load_data.readPickle(args.PDIR, args.DATASET, args.SFC,
         args.CNTYPE, CATEGORIES, IMG_SIZE=IMG_SIZE, CCL_DATASET=args.CCL_DATASET)
+    if args.DATASET == 'CCL':
+        ccl_dir=os.path.join(args.PDIR, args.DATASET, 'data', args.SFC, args.CNTYPE, args.CCL_DATASET)
+        (X, Xids, y, ov_idx) = load_data.matchCategories(ccl_dir, X, Xids, y, CATEGORIES)
+    
     (x_train, x_test, y_train_one_hot, y_test_one_hot) = load_data.balanceAndFormatData(X, y, Xids, CATEGORIES)
     
     
@@ -95,7 +100,7 @@ def main(argv):
             args.EPOCHS, x_test, y_test_one_hot, model_path)
     elif args.ANALYSIS=='transfer':
         M = model.transferModel(y, IMG_SIZE, args.lr, x_train, y_train_one_hot, args.EPOCHS,
-            x_test, y_test_one_hot, model_path, ccl_model_path, layers=9)
+            x_test, y_test_one_hot, model_path, ccl_model_path, layer=9)
     
     m_perf = anal.spotcheckModel(M, x_test, y_test_one_hot, CATEGORIES, model_path)
 
