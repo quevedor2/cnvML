@@ -25,17 +25,12 @@ EXAMPLES:
 
 
 import os, sys, getopt, argparse
+from pathlib import Path
 from pycnvML import load_data, model, anal
 #from pyimagesearch.gradcam import GradCAM
 #from occlusioncnn.occlusion import Occlusion
 
 def main(argv):
-    PDIR='/cluster/projects/pughlab/projects/cancer_cell_lines'
-    CCLDIR=Path(os.path.join(PDIR, 'CCL'))
-    CCL_DATADIR=os.path.join(CCLDIR, "data")
-    CCL_OUTDIR=os.path.join(CCLDIR, "models")
-    CCL_dataset='GDSC'
-    
     IMG_SIZE=300
     
     parser = argparse.ArgumentParser()
@@ -57,6 +52,9 @@ def main(argv):
     parser.add_argument('-e', '--epochs', dest="EPOCHS",
                     required=False, type=int, default=70,
                     metavar="<epochs>", help="Number of epochs to run for training")
+    parser.add_argument('-w', '--pdir', dest="PDIR",
+                    required=False, type=str, default='/cluster/projects/pughlab/projects/cancer_cell_lines',
+                    metavar="<pdir>", help="Parent directory containing the CCL and TCGA directories")
     parser.add_argument('-a', '--analysis', dest="ANALYSIS",
                     required=False, type=str, default='naive',
                     metavar="<analysis>", help="Whether to run a 'naive' training or 'transfer' from an existing model")
@@ -64,6 +62,14 @@ def main(argv):
                     required=False, type=str, default='',
                     metavar="<ccl_dataset>", help="What CCL dataset to use: GDCS, CCLE or GNE")
     args = parser.parse_args()
+    
+    #args.CCL_DATASET='GDSC'
+    #args.ANALYSIS='transfer'
+    #args.DATASET='CCL'
+    #CCLDIR=Path(os.path.join(args.PDIR, 'CCL'))
+    #CCL_DATADIR=os.path.join(CCLDIR, "data")
+    #CCL_OUTDIR=os.path.join(CCLDIR, "models")
+    #CCL_dataset='GDSC'
     
     CATEGORIES = ["ACC", "BLCA", "BRCA", "CESC", "CHOL", "COAD",
         "DLBC", "ESCA", "GBM", "HNSC", "KICH", "KIRC",
