@@ -8,7 +8,7 @@ from pycnvML.anal import *
 def readPickle(PDIR, DATASET, SFC, CNTYPE, CATEGORIES, IMG_SIZE=300, CCL_DATASET=''):
     DATADIR = os.path.join(PDIR, DATASET, "data", SFC, CNTYPE, CCL_DATASET)
     OUTDIR = os.path.join(PDIR, DATASET, "models", SFC, CNTYPE, CCL_DATASET)
-    TCGADIR = os.path.join(PDIR, 'TCGA', "models", SFC, CNTYPE, CCL_DATASET)
+    TCGADIR = os.path.join(PDIR, 'TCGA', "models", SFC, CNTYPE, '')
     CCLDIR = os.path.join(PDIR, 'CCL', "models", SFC, CNTYPE, CCL_DATASET)
     
     try:
