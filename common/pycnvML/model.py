@@ -133,7 +133,7 @@ class CNN:
         if self.y_class == 'regression':
             regression_model.add(Dense(units=1, name='out'))
         elif self.y_class == 'multi':
-            regression_model.add(Dense(self.y.max()+1, activation='softmax'))
+            regression_model.add(Dense(self.y.max()+1, activation='softmax', name='out'))
         elif self.y_class == 'binary':
             regression_model.add(Dense(units=1, activation='sigmoid', name='out'))
         self.model = regression_model
@@ -191,7 +191,7 @@ def buildModel(y, IMG_SIZE, lr, model_type, x_train, y_train_one_hot, epochs,
     return M
 
 def transferModel(y, IMG_SIZE, lr, x_train, y_train_one_hot, epochs,
-                  x_test, y_test_one_hot, modeldir, outpath, layer=9):
+                  x_test, y_test_one_hot, modeldir, outpath, layer=9, CATEGORIES):
     ############################
     # Transfer & Train ConvNet #
     ############################
@@ -201,7 +201,7 @@ def transferModel(y, IMG_SIZE, lr, x_train, y_train_one_hot, epochs,
         # M = load_model(os.path.join(OUTDIR, model_type, 'my_tcga_model_layer2.h5'))
         
         # Transfer the model and retrain last layers
-        Mtransfer = CNN(model=M, fine_tune_at=layer, lr=float(lr))
+        Mtransfer = CNN(model=M, y=np.arange(0,len(np.unique(CATEGORIES))), fine_tune_at=layer, lr=float(lr))
         Mtransfer.transfer()
         
         # Evaluate model performance and save
