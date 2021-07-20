@@ -26,7 +26,11 @@ if(any(sapply(opt, is.na))){
                 "gene"=file.path(PDIR, "input", 'f1_boxplot', 'tcga_genes'),
                 "hilbert_ascn"=file.path(PDIR, "input", 'f1_boxplot', 'tcga_hilbert_ascn'),
                 "hilbert_tcn"=file.path(PDIR, "input", 'f1_boxplot', 'tcga_hilbert_tcn'),
-                "sweep_ascn"=file.path(PDIR, "input", 'f1_boxplot', 'tcga_sweep_ascn'))
+                "morton_ascn"=file.path(PDIR, "input", 'f1_boxplot', 'tcga_morton_ascn'),
+                "diagonal_ascn"=file.path(PDIR, "input", 'f1_boxplot', 'tcga_diagonal_ascn'),
+                "sweep_ascn"=file.path(PDIR, "input", 'f1_boxplot', 'tcga_sweep_ascn'),
+                "scan_ascn"=file.path(PDIR, "input", 'f1_boxplot', 'tcga_scan_ascn'),
+                "random_ascn"=file.path(PDIR, "input", 'f1_boxplot', 'tcga_random_ascn'))
   #stop("Need to pass in directories")
 } else {
   paths <- list("bin"=opt$bin,
@@ -35,7 +39,7 @@ if(any(sapply(opt, is.na))){
 }
 
 all_f1s <- lapply(names(paths), function(p){
-  if(grepl('hilbert|sweep', p)){
+  if(grepl('tcn|ascn', p)){
     f1 <- read.csv(file.path(paths[[p]], "F1_test.csv"))
     f1 <- cbind(f1$Frac, rep(NA, nrow(f1)))
     colnames(f1) <- c('CNN', '')
@@ -66,13 +70,15 @@ cnn_ann_pval <- apply(dl_mat,2, function(x){apply(dl_mat, 2, function(y) t.test(
 # gene    0.4844377 0.5000000 0.6354212
 # hilbert 0.3602043 0.3645788 0.5000000
 
-
-pdf(file.path(PDIR, "output", "f1_boxplot", "tcga_F1.pdf"), width = 5, height = 3)
-par(mfrow=c(6,1), mar=c(0, 5.1, 0, 2))
+out_pdf <- file.path(PDIR, "output", "f1_boxplot", "tcga_F1.pdf")
+#out_pdf <- file.path(PDIR, "output", "f1_boxplot", "tcga_F1-allSFC.pdf")
+pdf(out_pdf, width = 5, height = 7)
+par(mfrow=c(10,1), mar=c(0, 8, 0, 2))
 sapply(names(all_f1s), function(f1_id){
   f1_tmp <- all_f1s[[f1_id]]
   boxplot(f1_tmp, horizontal = TRUE, ylim=c(0,1), col=cols, axes=FALSE)
-  axis(side = 2, at=c(1,2), labels=colnames(all_f1s[[f1_id]]), las=2)
+  axis(side = 2, at=c(1,2), labels=colnames(all_f1s[[f1_id]]), las=2, pos=0, tick = FALSE)
+  axis(side = 2, at=1.5, labels=f1_id, las=2, pos=-0.1, tick = FALSE)
   axis(side = c(1,3), at=c(-1, 2), lty = 3, labels=c('', ''), lwd=0.5)
   if(f1_id=='hilbert') axis(side = 1, at=seq(0, 1, by=0.2), labels=seq(0, 1, by=0.2))
 })
