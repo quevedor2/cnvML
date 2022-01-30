@@ -60,7 +60,10 @@ def main(argv):
                     metavar="<analysis>", help="Whether to run a 'naive' training or 'transfer' from an existing model")
     parser.add_argument('-p', '--cclds', dest="CCL_DATASET",
                     required=False, type=str, default='',
-                    metavar="<ccl_dataset>", help="What CCL dataset to use: GDCS, CCLE or GNE")
+                    metavar="<ccl_dataset>", help="What CCL dataset to use: GDCS, CCLE or GNE"),
+    parser.add_argument('-t', '--ccltrain', dest="CCL_TRAIN",
+                    required=False, type=str, default='',
+                    metavar="<ccl_train>", help="What CCL dataset train on using transfer learning: GDCS, CCLE or GNE"),
     args = parser.parse_args()
     
     #args.CCL_DATASET='GDSC'
@@ -68,6 +71,7 @@ def main(argv):
     #args.DATASET='CCL'
     
     #args.CCL_DATASET=''
+    #args.CCL_TRAIN='GDSC'
     #args.ANALYSIS='naive'
     #args.DATASET='TCGA'
     
@@ -79,8 +83,9 @@ def main(argv):
         "UCEC", "UCS", "UVM", "Normal"]
 
 
-    (X, Xids, y, DATADIR, TCGADIR, CCLDIR, OUTDIR) = load_data.readPickle(args.PDIR, args.DATASET, args.SFC,
-        args.CNTYPE, CATEGORIES, IMG_SIZE=IMG_SIZE, CCL_DATASET=args.CCL_DATASET)
+    (X, Xids, y, DATADIR, TCGADIR, CCLDIR, CCLTRAIN, OUTDIR) = load_data.readPickle(args.PDIR,
+        args.DATASET, args.SFC, args.CNTYPE, CATEGORIES, IMG_SIZE=IMG_SIZE,
+        CCL_DATASET=args.CCL_DATASET, CCL_TRAIN=args.CCL_TRAIN)
     if args.DATASET == 'CCL':
         ccl_dir=os.path.join(args.PDIR, args.DATASET, 'data', args.SFC, args.CNTYPE, args.CCL_DATASET)
         (X, Xids, y, ov_idx) = load_data.matchCategories(ccl_dir, X, Xids, y, CATEGORIES)
@@ -94,6 +99,7 @@ def main(argv):
     model_path = os.path.join(OUTDIR, args.model_type)
     tcga_model_path = os.path.join(TCGADIR, args.model_type)
     ccl_model_path = os.path.join(CCLDIR, args.model_type)
+    ccl_model_path = os.path.join(CCLTRAIN, args.model_type)
     if args.ANALYSIS=='naive':
         M = model.buildModel(y, IMG_SIZE, args.lr, args.model_type, x_train, y_train_one_hot,
             args.EPOCHS, x_test, y_test_one_hot, model_path)
