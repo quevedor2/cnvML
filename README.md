@@ -24,7 +24,7 @@ Seg files are fed as the input for all gene/bin/SFC mappings. The code is expect
 ### Mapping Seg files to Genes
 
 ### Mapping Seg files to Space-Filling Curves
-The R script [plotSFC.R](https://github.com/quevedor2/cnvML/blob/master/R/plotSFC.R) can be used to create the SFC png images, but expects an input structure as follows:
+The R script [plotSFC.R](https://github.com/quevedor2/cnvML/blob/master/R/plotSFC.R), found in the [R](https://github.com/quevedor2/cnvML/blob/master/R) directory, can be used to create the SFC png images, but expects an input structure as follows:
 ```
 [dataset]/
 └── input
