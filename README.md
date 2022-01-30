@@ -20,9 +20,10 @@ Seg files are fed as the input for all gene/bin/SFC mappings. The code is expect
   * 1000g.seg
   
 ### Mapping Seg files to Bins
-The R script [bins_tcga.R](https://github.com/quevedor2/cnvML/blob/master/preprocessing/bins_tcga.R) in the [preprocessing](https://github.com/quevedor2/cnvML/blob/master/preprocessing) directory was used to map the raw seg files to the bins that mapped the Hilbert SFC dimensions. Additionally, this script outputted a `bins_ref.rds` file that can be used at a later time to map Hilbert-Coordinates to individual bins.
+The R script [segToBins.R](https://github.com/quevedor2/cnvML/blob/master/R/segToBins.R) in the [R](https://github.com/quevedor2/cnvML/blob/master/R) directory was used to map the raw seg files to the bins that mapped the Hilbert SFC dimensions. Additionally, this script outputted a `bins_ref.rds` file that can be used at a later time to map Hilbert-Coordinates to individual bins.
 
 ### Mapping Seg files to Genes
+The R script [segToGenes.R](https://github.com/quevedor2/cnvML/blob/master/R/segToGenes.R) in the [R](https://github.com/quevedor2/cnvML/blob/master/R) directory was used to map the raw seg files to the bins that mapped the Hilbert SFC dimensions. Additionally, this script outputted a `bins_ref.rds` file that can be used at a later time to map Hilbert-Coordinates to individual bins.
 
 ### Mapping Seg files to Space-Filling Curves
 The R script [plotSFC.R](https://github.com/quevedor2/cnvML/blob/master/R/plotSFC.R), found in the [R](https://github.com/quevedor2/cnvML/blob/master/R) directory, can be used to create the SFC png images, but expects an input structure as follows:
