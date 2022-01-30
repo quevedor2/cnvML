@@ -1,33 +1,28 @@
+suppressPackageStartupMessages(library(optparse))
+
+####################
+#### Parameters ####
+option_list <- list( 
+  make_option(c("-p", "--pdir"), type="character", 
+              default='/mnt/work1/users/pughlab/projects/cancer_cell_lines',
+              help="Path to seg files [dir]/[dataset]/input/[seg_file] [%default]"),
+  make_option(c("-d", "--dataset"), type="character", default='ccl_aggregate',
+              help="Dataset to use, 'ccl_aggregate' or 'TCGA' [%default]"),
+  make_option(c("-s", "--segfile"), type="character", default=NULL,
+              help="If --dataset is set to custom, indicate the name of the seg_file [%default]"),
+  make_option(c("-m", "--metafile"), type="character", default=NULL,
+              help="If --dataset is set to custom, indicate the meta RDS file path [%default]")
+)
+opt <- parse_args(OptionParser(option_list=option_list))
+
+########################
+#### Load Libraries ####
 library(dplyr)
+library(RcnvML)
 library(GenomicRanges)
 
 ###################
 #### Functions ####
-getChrLength <- function(){
-  require(BSgenome.Hsapiens.UCSC.hg19)
-  chr.lengths = seqlengths(Hsapiens)[1:24]
-  chr.len.gr <- makeGRangesFromDataFrame(data.frame("chrom"=names(chr.lengths),
-                                                    "loc.start"=rep(1, length(chr.lengths)),
-                                                    "loc.end"=chr.lengths))
-  chr.len.gr$cum.end <- cumsum(as.numeric(end(chr.len.gr)))
-  chr.len.gr$cum.start <- chr.len.gr$cum.end - (end(chr.len.gr) -1)
-  chr.len.gr$cum.mid <- (chr.len.gr$cum.start + ((chr.len.gr$cum.end - chr.len.gr$cum.start)/2))
-  return(chr.len.gr)
-}
-
-addCumPos <- function(dat, ref, dat.type){
-  m.row.idx <- match(as.character(dat$chrom), as.character(seqnames(ref)))
-  if(dat.type=='data'){
-    dat$cpos <- ref[m.row.idx,]$cum.start +  dat$pos - 1
-    dat$chr.stat
-  } else if(dat.type == 'seg'){
-    dat$cloc.start <- ref[m.row.idx,]$cum.start +  dat$loc.start - 1
-    dat$cloc.end <- ref[m.row.idx,]$cum.start +  dat$loc.end - 1
-  }
-  dat$chr.stat <- (m.row.idx %% 2) + 1
-  return(dat)
-}
-
 formatSeg <- function(segd, analysis, PDIR=NULL){
   if(analysis=='TCGA'){
     colnames(segd)[2:4] <- c('chrom', 'loc.start', 'loc.end')
@@ -65,9 +60,9 @@ hilbertBinSize <- function(order, scale, chr.size.dat){
 ##############
 #### Main ####
 ## Load in SEG files
-analysis <- 'ccl_aggregate'
+analysis <- opt$dataset 
 m_idx <- NULL
-PDIR <- '/mnt/work1/users/pughlab/projects/cancer_cell_lines'
+PDIR <- opt$pdir
 if(analysis=='TCGA'){
   seg_files <- "TCGA_mastercalls.abs_segtabs.fixed.txt"
   METADIR='/mnt/work1/users/pughlab/projects/cancer_cell_lines/TCGA'
@@ -81,8 +76,11 @@ if(analysis=='TCGA'){
   meta$GDSC <- gsub(".cel$", "", meta$GDSC, ignore.case = TRUE)
   colnames(meta) <- gsub("oncocode", "cancer type", colnames(meta))
   colnames(meta) <- gsub("^GNE$", "gCSI", colnames(meta))
+} else if(analysis=='custom'){
+  seg_files <- opt$segfile
+  meta <- readRDS(opt$metafile)
 } else {
-  stop("Analysis must be either 'TCGA' or 'ccl_aggregate'")
+  stop("Analysis must be either 'TCGA' or 'ccl_aggregate' or 'custom'")
 }
 OUTDIR <- file.path(PDIR, analysis, "output", "bin")
 dir.create(OUTDIR, recursive = TRUE, showWarnings = FALSE)
