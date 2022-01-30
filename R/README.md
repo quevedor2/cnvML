@@ -3,6 +3,8 @@
 
 | Code | Section | Figure | Description |
 |------|------|------|------|
+| <a href="#segtobins">segToBins.R</a> | Preprocessing |  | Converts the ASCN segs to genomic bins that match SFC segmentation |
+| <a href="#segtogenes">segToGenes.R</a> | Preprocessing |  | Annotates all the genes in the genome with their corresponding ASCN value |
 | <a href="#plotsfcr">plotSFC.R</a> | Preprocessing |  | Plots Hilbert/Sweep ASCN and TCN SFC |
 | <a href="#assignoncocoder">assignOncocode.R</a> | Preprocessing |  | Moves SFC pngs to oncocode directory structure |
 | <a href="#arrowssfcr">arrowsSFC.R</a> | Supplementary Figure | Fig S1 | Mapping of SFC |
@@ -10,6 +12,46 @@
 | <a href="#comparesfcr">compareSFC.R</a> | Supplementary Figure | Fig S3 | Sweep vs Hilbert SFC |
 
 ## Pre-processing
+### segToBins.R
+* segsToBins.R is the main function to convert the ASCN seg data and bin them into genomic segments that are equivalent to the SFC segmentation. Three Sample-by-Bin matrices are generated from this script, one for Total_CN, HSCN_1 and HSCN_2, as well as a reference bins file that creates the mapping between genomic bin ID and coordinates.
+```
+Options:
+	-p PDIR, --pdir=PDIR
+		Path to seg files [dir]/[dataset]/input/[seg_file] [/mnt/work1/users/pughlab/projects/cancer_cell_lines]
+
+	-d DATASET, --dataset=DATASET
+		Dataset to use, 'ccl_aggregate' or 'TCGA' [ccl_aggregate]
+
+	-s SEGFILE, --segfile=SEGFILE
+		If --dataset is set to custom, indicate the name of the seg_file [NULL]
+
+	-m METAFILE, --metafile=METAFILE
+		If --dataset is set to custom, indicate the meta RDS file path [NULL]
+
+	-h, --help
+		Show this help message and exit
+```
+
+### segToGenes.R
+* segsToGenes.R is the main function to convert the ASCN seg data into gene-level ASCN representation. Three Sample-by-Gene matrices are generated from this script, one for Total_CN, HSCN_1 and HSCN_2.
+```
+Options:
+	-p PDIR, --pdir=PDIR
+		Path to seg files [dir]/[dataset]/input/[seg_file] [/mnt/work1/users/pughlab/projects/cancer_cell_lines]
+
+	-d DATASET, --dataset=DATASET
+		Dataset to use, 'ccl_aggregate' or 'TCGA' [ccl_aggregate]
+
+	-s SEGFILE, --segfile=SEGFILE
+		If --dataset is set to custom, indicate the name of the seg_file [NULL]
+
+	-m METAFILE, --metafile=METAFILE
+		If --dataset is set to custom, indicate the meta RDS file path [NULL]
+
+	-h, --help
+		Show this help message and exit
+```
+
 ### plotSFC.R
 * plotSFC.R is the main function to plot the Hilbert spacefilling curves for TCGA and the cancer cell line seg files
 ```
