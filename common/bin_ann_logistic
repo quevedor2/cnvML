@@ -1,117 +1,6 @@
-#############################
-# MultiClass Classification #
-#############################
-# PURPOSE:
-#################
-# Preprocessing #
-#################
-def balanceGrp(df, q=0.5):
-    cnts = df.cancer_type.value_counts()
-    target_n = int(np.quantile(cnts, q))
-    min_n = int(target_n/4)
-    
-    # Divide by class
-    ctypes = df.cancer_type.unique()
-    ctypes = ctypes.tolist()
-    ctypes = [ x for x in ctypes if str(x) != 'nan' ]
-    
-    frames = []
-    for ctype in ctypes:
-        df_ctype = df[df.cancer_type == ctype]
-        if df_ctype.shape[0] < min_n:
-            print(ctype + " [Remove]: " + str(df_ctype.shape[0])
-                + " < " + str(min_n))
-            df_ctype = df_ctype.sample(0, replace=True)
-        elif df_ctype.shape[0] < target_n:
-            print(ctype + " [Upsample]: " + str(df_ctype.shape[0])
-                + " < " + str(target_n))
-            df_ctype = df_ctype.sample(target_n, replace=True)
-        elif df_ctype.shape[0] > target_n:
-            print(ctype + " [Downsample]: " + str(df_ctype.shape[0])
-                + " > " + str(target_n))
-            df_ctype = df_ctype.sample(target_n, replace=False)
-        else :
-            df_ctype = df_ctype
-        frames.append(df_ctype)
-    
-    df2 = pd.concat(frames)
-    return df2
-
-#################
-# Visualization #
-#################
-def plot_loss_accuracy(hist, outfile):
-    acc = hist.history['accuracy']
-    val_acc = hist.history['val_accuracy']
-    loss = hist.history['loss']
-    val_loss = hist.history['val_loss']
-    
-    fig, (ax1, ax2) = plt.subplots(2, sharex=True)
-    ax1.plot(acc, label='Training Accuracy')
-    ax1.plot(val_acc, label='Validation Accuracy')
-    ax1.legend(loc='lower right')
-    ax1.set_ylabel('Accuracy')
-    ax1.set_ylim(0, 1.0) #([min(plt.ylim()),1])
-    
-    ax2.plot(loss, label='Training Loss')
-    ax2.plot(val_loss, label='Validation Loss')
-    ax2.legend(loc='upper right')
-    ax2.set_ylabel('Cross Entropy')
-    ax2.set_xlabel('epoch')
-    fig.show()
-    fig.savefig(outfile)
-
-def plot_confusion_matrix(model, X, y, range_y, outfile):
-    y_pred = list(model.predict_classes(X, verbose=0))
-    y = list(y)
-    plt.figure(figsize=(8, 6))
-    
-    # Ensure that all the classes are represented
-    y.extend(list(range_y))
-    y_pred.extend(list(range_y))
-    cm=confusion_matrix(y, y_pred)
-    np.fill_diagonal(cm, list(cm.diagonal()-1))
-    
-    # Make the heatmaps!!!
-    sns.heatmap(pd.DataFrame(cm), annot=True, fmt='d', cmap='YlGnBu', alpha=0.8, vmin=0)
-    plt.savefig(outfile)
-    return cm
-
-def plot_class_cm(cm, outfile,metric ='f1'):
-    (p, r, f1) = get_F1score(cm)
-    if (metric is 'f1'):
-        class_frac=f1
-    elif (metric is 'p'):
-        class_frac = p
-    else:
-        class_frac = r
-    
-    class_frac=class_frac.round(2)
-    class_id=list(range(0, len(class_frac)))
-    class_df = pd.DataFrame({'ID':class_id, 'Frac':class_frac,
-                            'Cnt':cm.diagonal(), 'Total':cm.sum(0)})
-    
-    #b1=plt.bar("ID", "Total", data=class_df,class_id, class_frac)
-    b2=plt.bar("ID", "Frac", data=class_df)
-    plt.ylim((0,1))
-    #plt.rcParams["figure.figsize"] = [6,2]
-    plt.xlabel("Cancer_Types")
-    plt.ylabel(metric)
-    plt.subplots_adjust(bottom=0.2, top=0.8)
-    plt.xticks(class_id, rotation=90)
-    plt.savefig(outfile)
-    
-    return class_df
-
-def get_F1score(cm):
-    precision = cm.diagonal() / cm.sum(axis=0)
-    recall = cm.diagonal() / cm.sum(axis=1)
-    f1 = 2 * ((precision * recall)/(precision + recall))
-    return (precision, recall, f1)
-
-#############################
-# MultiClass Classification #
-#############################
+##########################################
+# Genomic Bin: MultiClass Classification #
+##########################################
 class MulticlassModels:
     def __init__(self, X=0, y=0, model=0, fine_tune_at=0, lr=0.00001):
         self.X = X
@@ -178,6 +67,8 @@ from tensorflow.keras.layers import Dense, Dropout, BatchNormalization, Activati
 from tensorflow.keras.optimizers import Adam
 import tensorflow as tf
 
+from pycnvML import load_data, model, anal, viz
+
 ######################################
 # Data Visualization & Preprocessing #
 ######################################
@@ -195,7 +86,7 @@ datadir=Path(os.path.join(pdir, ref_analysis))
 os.chdir(datadir)
 df = pd.read_csv(datadir / 'data' / 'Modal_Total_CN_matrix.csv')
 df = df.drop([df.columns[0]], axis=1)
-df = balanceGrp(df, q=0.5)
+df = anal.balanceGrpDf(df, q=0.5)
 model_type=sys.argv[1] # 'ann' or 'lr'
 
 ## Feature scaling and organizing X and y
@@ -253,12 +144,12 @@ np.savetxt(os.path.join(datadir, 'models', model_type, 'weights_ord.csv'),
 ####################
 ## Test performance
 print("Plotting confusion matrix...")
-cm = plot_confusion_matrix(M, X_test, np.argmax(y_test, axis=1), range(0, len(CATEGORIES)),
+cm = viz.plot_confusion_matrix(M, X_test, np.argmax(y_test, axis=1), range(0, len(CATEGORIES)),
                            os.path.join(datadir, "models",
                            model_type, "lr_confusion-matrix.png"))
 plt.close("all")
 
-f1 = plot_class_cm(cm, os.path.join(datadir, "models",
+f1 = viz.plot_class_cm(cm, os.path.join(datadir, "models",
                    model_type, "cnn_cm_barplot.png"))
 np.savetxt(os.path.join(datadir, 'models', model_type, 'F1_test.csv'),
     f1, fmt='%5.2f', delimiter=",", header='ID,Frac,Cnt,Total')
@@ -337,13 +228,13 @@ for tl in ['naive', 'raw', 'transfer']:
         print(tl + " min: " + str(np.min(ccl_yT_class)))
         if(not os.path.isdir(os.path.join(CCLDIR, "models", model_type, dataset))):
              os.makedirs(os.path.join(CCLDIR, "models", model_type, dataset))
-        ccl_cm = plot_confusion_matrix(M, ccl_XT, ccl_yT_class,
+        ccl_cm = viz.plot_confusion_matrix(M, ccl_XT, ccl_yT_class,
                                     range(0, len(CAT)), # use to be 0,
                                     os.path.join(CCLDIR, "models",
                                     model_type, dataset, tl  + "_CCLlr_confusion-matrix.png"))
         plt.close("all")
         
-        f1 = plot_class_cm(ccl_cm, os.path.join(CCLDIR, "models", model_type,
+        f1 = viz.plot_class_cm(ccl_cm, os.path.join(CCLDIR, "models", model_type,
             dataset, tl  + "_CCL_cm_barplot.png"))
         plt.close("all")
         np.savetxt(os.path.join(CCLDIR, 'models', model_type, dataset, tl  + '_F1_test.csv'),

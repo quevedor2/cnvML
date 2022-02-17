@@ -49,6 +49,38 @@ def balanceGrp(X, y, Xids, q=0.5):
     y_bal=y[frames[:,0].astype('int'),:]
     return X_bal,y_bal,Xids_bal
 
+def balanceGrpDf(df, q=0.5):
+    cnts = df.cancer_type.value_counts()
+    target_n = int(np.quantile(cnts, q))
+    min_n = int(target_n/4)
+    
+    # Divide by class
+    ctypes = df.cancer_type.unique()
+    ctypes = ctypes.tolist()
+    ctypes = [ x for x in ctypes if str(x) != 'nan' ]
+    
+    frames = []
+    for ctype in ctypes:
+        df_ctype = df[df.cancer_type == ctype]
+        if df_ctype.shape[0] < min_n:
+            print(ctype + " [Remove]: " + str(df_ctype.shape[0])
+                + " < " + str(min_n))
+            df_ctype = df_ctype.sample(0, replace=True)
+        elif df_ctype.shape[0] < target_n:
+            print(ctype + " [Upsample]: " + str(df_ctype.shape[0])
+                + " < " + str(target_n))
+            df_ctype = df_ctype.sample(target_n, replace=True)
+        elif df_ctype.shape[0] > target_n:
+            print(ctype + " [Downsample]: " + str(df_ctype.shape[0])
+                + " > " + str(target_n))
+            df_ctype = df_ctype.sample(target_n, replace=False)
+        else :
+            df_ctype = df_ctype
+        frames.append(df_ctype)
+    
+    df2 = pd.concat(frames)
+    return df2
+
 def spotcheckModel(M, x_test, y_test_one_hot, CATEGORIES, outpath):
     y_test_class = np.argmax(y_test_one_hot, axis=1)
     
